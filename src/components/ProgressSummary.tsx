@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { loadProgress, resetProgress } from "@/lib/storage";
 import type { Progress } from "@/lib/types";
 
@@ -16,7 +17,7 @@ export function ProgressSummary({ totalQuestions }: Props) {
   }, []);
 
   useEffect(() => {
-    // localStorage は SSR で読めないので、マウント後にクライアントで初期化
+    // localStorage はマウント後に読み込み
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     const handler = () => refresh();
@@ -30,9 +31,7 @@ export function ProgressSummary({ totalQuestions }: Props) {
 
   if (!progress) {
     return (
-      <div className="h-24 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-        <p className="text-sm text-zinc-500">読み込み中...</p>
-      </div>
+      <div className="h-32 animate-pulse rounded-2xl border border-white/5 bg-white/[0.02]" />
     );
   }
 
@@ -53,42 +52,88 @@ export function ProgressSummary({ totalQuestions }: Props) {
   };
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold">あなたの進捗</h2>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="text-xs text-zinc-500 hover:text-red-600 hover:underline"
-        >
-          リセット
-        </button>
-      </div>
+    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.03] to-transparent p-6 backdrop-blur">
+      <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-rose-500/10 blur-3xl" />
 
-      <div className="grid grid-cols-3 gap-4">
-        <Stat
-          label="完答した問題"
-          value={`${progress.totalSolved} / ${totalQuestions}`}
-        />
-        <Stat label="正解率" value={`${accuracy}%`} />
-        <Stat label="進捗" value={`${solvedRate}%`} />
-      </div>
+      <div className="relative">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📊</span>
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-300">
+              あなたの進捗
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="text-[11px] text-zinc-500 transition hover:text-rose-300 hover:underline"
+          >
+            リセット
+          </button>
+        </div>
 
-      <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div
-          className="h-full bg-green-500 transition-all"
-          style={{ width: `${solvedRate}%` }}
-        />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <Stat
+            label="完答した問題"
+            value={`${progress.totalSolved}`}
+            suffix={`/ ${totalQuestions}`}
+            accent="text-emerald-300"
+          />
+          <Stat
+            label="正解率"
+            value={`${accuracy}%`}
+            accent="text-rose-300"
+          />
+          <Stat
+            label="進捗率"
+            value={`${solvedRate}%`}
+            accent="text-fuchsia-300"
+          />
+          <Stat
+            label="最高ストリーク"
+            value={`${progress.bestStreak}`}
+            suffix="連続"
+            accent="text-amber-300"
+          />
+        </div>
+
+        <div className="relative mt-6 h-2 w-full overflow-hidden rounded-full bg-white/5">
+          <motion.div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${solvedRate}%` }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          />
+        </div>
       </div>
     </section>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  suffix,
+  accent,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  accent: string;
+}) {
   return (
     <div>
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="mt-1 text-xl font-bold tabular-nums">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1.5 flex items-baseline gap-1">
+        <span className={`text-2xl font-bold tabular-nums ${accent}`}>
+          {value}
+        </span>
+        {suffix && (
+          <span className="text-xs text-zinc-500">{suffix}</span>
+        )}
+      </p>
     </div>
   );
 }

@@ -19,8 +19,12 @@ export default async function QuizPage({ params }: Props) {
   const qs = questionsByCategory(cat.id);
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <QuizRunner questions={qs} categoryName={cat.name} />
+    <div className="mx-auto max-w-3xl px-6 py-10 sm:py-12">
+      <QuizRunner
+        questions={qs}
+        categoryName={cat.name}
+        categoryEmoji={cat.emoji}
+      />
     </div>
   );
 }

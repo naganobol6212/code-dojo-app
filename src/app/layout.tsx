@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ruby on Rails クイズ",
-  description: "初学者から上級者まで。Ruby と Rails をクイズで学ぼう。",
+  title: "RubyDojo — Ruby on Rails をクイズで極める",
+  description:
+    "初学者から上級者まで。Ruby と Rails の本質を 100 問のクイズで学べる学習プラットフォーム。",
 };
 
 export default function RootLayout({
@@ -25,9 +26,15 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="relative min-h-full overflow-x-hidden bg-zinc-950 text-zinc-100 selection:bg-rose-500/30 selection:text-white">
+        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <div className="absolute -top-40 -left-40 h-[36rem] w-[36rem] rounded-full bg-rose-500/10 blur-3xl" />
+          <div className="absolute top-1/2 -right-40 h-[32rem] w-[32rem] rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="absolute -bottom-40 left-1/3 h-[28rem] w-[28rem] rounded-full bg-fuchsia-500/10 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(244,63,94,0.08),transparent_60%)]" />
+        </div>
         {children}
       </body>
     </html>

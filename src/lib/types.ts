@@ -3,40 +3,48 @@ export type Difficulty = "beginner" | "intermediate" | "advanced";
 export type CategoryId =
   | "ruby-basics"
   | "collections"
+  | "ruby-oop"
+  | "ruby-advanced"
   | "rails-convention"
-  | "active-record"
-  | "routing-controller";
+  | "routing-controller"
+  | "active-record";
 
 export type Category = {
   id: CategoryId;
   name: string;
   description: string;
   emoji: string;
+  accentClass: string;
+  ringClass: string;
 };
 
-export type ChoiceQuestion = {
+export type Explanation = {
+  summary: string;
+  reason: string;
+  codeExample?: string;
+  commonMistakes?: string[];
+  references?: { label: string; url: string }[];
+};
+
+type BaseQuestion = {
   id: string;
   categoryId: CategoryId;
   difficulty: Difficulty;
-  type: "choice";
   question: string;
   code?: string;
+  hints: string[];
+  explanation: Explanation;
+};
+
+export type ChoiceQuestion = BaseQuestion & {
+  type: "choice";
   choices: string[];
   answerIndex: number;
-  hints: string[];
-  explanation: string;
 };
 
-export type TextQuestion = {
-  id: string;
-  categoryId: CategoryId;
-  difficulty: Difficulty;
+export type TextQuestion = BaseQuestion & {
   type: "text";
-  question: string;
-  code?: string;
   answers: string[];
-  hints: string[];
-  explanation: string;
 };
 
 export type Question = ChoiceQuestion | TextQuestion;
@@ -53,4 +61,5 @@ export type Progress = {
   attempts: Record<string, QuestionAttempt>;
   totalSolved: number;
   totalAttempts: number;
+  bestStreak: number;
 };
