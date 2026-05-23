@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { loadProgress, resetProgress } from "@/lib/storage";
 import type { Progress } from "@/lib/types";
 
@@ -8,22 +8,25 @@ type Props = {
   totalQuestions: number;
 };
 
-const subscribe = (cb: () => void) => {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener("storage", cb);
-  return () => window.removeEventListener("storage", cb);
-};
-
 export function ProgressSummary({ totalQuestions }: Props) {
-  const [reloadTick, setReloadTick] = useState(0);
-  const progress = useSyncExternalStore<Progress | null>(
-    subscribe,
-    () => {
-      void reloadTick;
-      return loadProgress();
-    },
-    () => null,
-  );
+  const [progress, setProgress] = useState<Progress | null>(null);
+
+  const refresh = useCallback(() => {
+    setProgress(loadProgress());
+  }, []);
+
+  useEffect(() => {
+    // localStorage は SSR で読めないので、マウント後にクライアントで初期化
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refresh();
+    const handler = () => refresh();
+    window.addEventListener("storage", handler);
+    window.addEventListener("rrq:progress-updated", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("rrq:progress-updated", handler);
+    };
+  }, [refresh]);
 
   if (!progress) {
     return (
@@ -45,7 +48,7 @@ export function ProgressSummary({ totalQuestions }: Props) {
   const handleReset = () => {
     if (confirm("進捗をリセットします。よろしいですか？")) {
       resetProgress();
-      setReloadTick((n) => n + 1);
+      refresh();
     }
   };
 

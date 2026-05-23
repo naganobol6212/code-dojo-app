@@ -22,6 +22,7 @@ export const loadProgress = (): Progress => {
 export const saveProgress = (progress: Progress) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  window.dispatchEvent(new Event("rrq:progress-updated"));
 };
 
 export const recordAttempt = (
@@ -61,4 +62,5 @@ export const recordAttempt = (
 export const resetProgress = () => {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
+  window.dispatchEvent(new Event("rrq:progress-updated"));
 };
