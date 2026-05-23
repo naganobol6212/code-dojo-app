@@ -16,6 +16,7 @@ import {
 } from "@/lib/storage";
 import { HintBox } from "./HintBox";
 import { CodeBlock } from "./CodeBlock";
+import { CodeEditor } from "./CodeEditor";
 import { ExplanationCard } from "./ExplanationCard";
 import { StreakDisplay } from "./StreakDisplay";
 
@@ -112,7 +113,6 @@ export function QuizRunner({
     if (correct) setSessionSolved((n) => n + 1);
   };
 
-  // practical: 解答を確認するモードへ
   const handleRevealPractical = () => {
     recordAttempt(current.id, true, hintsUsed, streak);
     setSessionSolved((n) => n + 1);
@@ -151,22 +151,21 @@ export function QuizRunner({
   const isFinished = index >= total - 1 && status !== "answering";
   const progressPct =
     ((index + (status !== "answering" ? 1 : 0)) / total) * 100;
+  const answered = status !== "answering";
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/quiz/${categoryId}`}
-            className="group inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-300"
-          >
-            <span className="transition-transform group-hover:-translate-x-0.5">
-              ←
-            </span>
-            <span>問題一覧</span>
-          </Link>
-        </div>
+        <Link
+          href={`/quiz/${categoryId}`}
+          className="group inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-300"
+        >
+          <span className="transition-transform group-hover:-translate-x-0.5">
+            ←
+          </span>
+          <span>問題一覧</span>
+        </Link>
         <div className="flex items-center gap-2.5">
           {current.type !== "practical" && <StreakDisplay streak={streak} />}
           <div className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 font-mono text-xs text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
@@ -213,53 +212,35 @@ export function QuizRunner({
           transition={{ duration: 0.18 }}
           className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900/40 dark:shadow-2xl dark:shadow-black/30"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
+          {/* 上部メタ情報 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${difficultyClass(
+                current.difficulty,
+              )}`}
+            >
+              {difficultyLabel(current.difficulty)}
+            </span>
+            {current.type === "practical" && (
+              <span className="rounded-full border border-orange-400/40 bg-orange-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300">
+                実践課題
+              </span>
+            )}
+            <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
+              {current.id}
+            </span>
+            {currentMark && (
               <span
-                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${difficultyClass(
-                  current.difficulty,
-                )}`}
-              >
-                {difficultyLabel(current.difficulty)}
-              </span>
-              {current.type === "practical" && (
-                <span className="rounded-full border border-orange-400/40 bg-orange-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300">
-                  実践課題
-                </span>
-              )}
-              <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
-                {current.id}
-              </span>
-            </div>
-            {/* レビューマーク */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => handleMark("mastered")}
-                title="完璧にする"
-                className={`flex h-7 items-center gap-1 rounded-md px-2 text-xs transition ${
+                className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                   currentMark === "mastered"
-                    ? "bg-emerald-500 text-white"
-                    : "border border-zinc-200 bg-white text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300"
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                 }`}
               >
-                <span>✓</span>
-                <span>完璧</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMark("review")}
-                title="見直し対象にする"
-                className={`flex h-7 items-center gap-1 rounded-md px-2 text-xs transition ${
-                  currentMark === "review"
-                    ? "bg-amber-500 text-white"
-                    : "border border-zinc-200 bg-white text-zinc-500 hover:border-amber-400 hover:text-amber-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 dark:hover:border-amber-400/40 dark:hover:text-amber-300"
-                }`}
-              >
-                <span>🔁</span>
-                <span>見直し</span>
-              </button>
-            </div>
+                <span>{currentMark === "mastered" ? "✓" : "🔁"}</span>
+                <span>{currentMark === "mastered" ? "完璧" : "要見直し"}</span>
+              </span>
+            )}
           </div>
 
           <h2 className="text-lg font-semibold leading-relaxed text-zinc-900 dark:text-zinc-100">
@@ -268,7 +249,7 @@ export function QuizRunner({
 
           {current.code && <CodeBlock code={current.code} />}
 
-          {/* 回答エリア (タイプ別) */}
+          {/* 回答エリア */}
           {current.type === "choice" ? (
             <ChoiceArea
               question={current}
@@ -289,7 +270,10 @@ export function QuizRunner({
               className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3.5 font-mono text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-rose-400/50"
             />
           ) : (
-            <PracticalArea question={current} />
+            <>
+              <PracticalArea question={current} />
+              <CodeEditor questionId={current.id} />
+            </>
           )}
 
           <HintBox
@@ -298,8 +282,8 @@ export function QuizRunner({
             onHintReveal={(n) => setHintsUsed(n)}
           />
 
-          {/* アクションボタン */}
-          {status === "answering" ? (
+          {/* メインアクション */}
+          {!answered ? (
             current.type === "practical" ? (
               <button
                 type="button"
@@ -348,6 +332,48 @@ export function QuizRunner({
                   )}
                 </>
               )}
+
+              {/* 回答後のレビューマーク (大きく、目立つ場所) */}
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
+                <p className="mb-3 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  この問題の理解度を記録しましょう
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleMark("mastered")}
+                    className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                      currentMark === "mastered"
+                        ? "border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                        : "border-zinc-300 bg-white text-zinc-700 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
+                    }`}
+                  >
+                    <span>✓</span>
+                    <span>完璧 (もう見直し不要)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMark("review")}
+                    className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                      currentMark === "review"
+                        ? "border-amber-500 bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                        : "border-zinc-300 bg-white text-zinc-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-amber-400/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+                    }`}
+                  >
+                    <span>🔁</span>
+                    <span>要見直し (あとで復習)</span>
+                  </button>
+                  {currentMark && (
+                    <button
+                      type="button"
+                      onClick={() => handleMark(currentMark)}
+                      className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs text-zinc-600 transition hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 dark:hover:bg-white/10"
+                    >
+                      マーク解除
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* ナビゲーション */}
               <div className="flex flex-wrap gap-2">
@@ -416,7 +442,6 @@ export function QuizRunner({
   );
 }
 
-// ChoiceArea: 選択肢
 function ChoiceArea({
   question,
   choice,
@@ -482,7 +507,6 @@ function ChoiceArea({
   );
 }
 
-// 実践課題の要件表示
 function PracticalArea({ question }: { question: PracticalQuestion }) {
   return (
     <div className="rounded-xl border border-orange-300/60 bg-orange-50/50 px-4 py-3 dark:border-orange-500/30 dark:bg-orange-500/[0.06]">
@@ -503,13 +527,12 @@ function PracticalArea({ question }: { question: PracticalQuestion }) {
         ))}
       </ul>
       <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
-        💡 自分のエディタで実装してから、下のサンプル解答ボタンを押して答え合わせしてください。
+        💡 下のエディタで実装してから、サンプル解答ボタンで答え合わせしましょう。入力は自動保存されます。
       </p>
     </div>
   );
 }
 
-// 実践課題のサンプル解答
 function PracticalSolution({ question }: { question: PracticalQuestion }) {
   return (
     <motion.div

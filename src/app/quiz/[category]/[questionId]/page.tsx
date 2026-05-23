@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 import { findCategory, categories } from "@/data/categories";
 import { questionsByCategory } from "@/data/questions";
 import { QuizRunner } from "@/components/QuizRunner";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function generateStaticParams() {
-  // 各カテゴリ × 各問題のパスを事前生成
   return categories.flatMap((c) =>
     questionsByCategory(c.id).map((q) => ({
       category: c.id,
@@ -28,10 +26,7 @@ export default async function QuizPage({ params }: Props) {
   if (startIndex === -1) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 sm:py-12">
-      <div className="mb-6 flex justify-end">
-        <ThemeToggle />
-      </div>
+    <div className="mx-auto max-w-3xl px-6 py-8 sm:py-10">
       <QuizRunner
         questions={qs}
         categoryName={cat.name}

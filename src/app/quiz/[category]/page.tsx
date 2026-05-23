@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { findCategory, categories } from "@/data/categories";
 import { questionsByCategory } from "@/data/questions";
 import { QuestionPicker } from "@/components/QuestionPicker";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function generateStaticParams() {
   return categories.map((c) => ({ category: c.id }));
@@ -20,10 +19,7 @@ export default async function CategoryPage({ params }: Props) {
   const qs = questionsByCategory(cat.id);
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 sm:py-12">
-      <div className="mb-6 flex justify-end">
-        <ThemeToggle />
-      </div>
+    <div className="mx-auto max-w-3xl px-6 py-8 sm:py-10">
       <QuestionPicker
         questions={qs}
         categoryName={cat.name}
