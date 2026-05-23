@@ -96,8 +96,8 @@ export const categories: Category[] = [
   },
   {
     id: "git-github",
-    trackId: "ruby",
-    name: "Git & GitHub",
+    trackId: "git",
+    name: "Git & GitHub 基礎",
     description: "branch 戦略、PR、rebase/merge、conflict 解決、gh CLI",
     emoji: "🔧",
     accentClass: "from-slate-500/20 to-zinc-500/5",
@@ -105,7 +105,7 @@ export const categories: Category[] = [
   },
   {
     id: "security",
-    trackId: "ruby",
+    trackId: "infosec",
     name: "セキュリティ (OWASP)",
     description: "CSRF/XSS/SQLi, Strong Params, secret 管理, セッション",
     emoji: "🛡️",
@@ -123,8 +123,8 @@ export const categories: Category[] = [
   },
   {
     id: "linux-cli",
-    trackId: "ruby",
-    name: "Linux & CLI",
+    trackId: "linux",
+    name: "Linux & CLI 基礎",
     description: "find/grep/sed/awk, パイプ, ssh, パーミッション, プロセス",
     emoji: "🐧",
     accentClass: "from-zinc-500/20 to-stone-500/5",
