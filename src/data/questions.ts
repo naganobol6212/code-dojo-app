@@ -546,6 +546,12 @@ export const questions: Question[] = [
       "条件が 0 の時に実行する",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "if と同じ挙動になるのは順番が逆。unless は if の反対で、条件が偽 (falsy) のときだけ実行する。",
+      "正解。`unless cond` は `if !cond` と等価。Ruby の falsy は false と nil の 2 つだけなので、cond がそのどちらかのときに本体が実行される。",
+      "nil のときだけ実行するわけではない。false でも実行されるし、それ以外の値 (0, \"\", [] など) では実行されない。",
+      "Ruby で 0 は truthy なので、unless の条件が 0 だと本体は実行されない。",
+    ],
     hints: [
       "`unless` は「〜でない限り」という意味の英語。",
       "`if !condition` と等価です。",
@@ -555,11 +561,33 @@ export const questions: Question[] = [
       summary: "`unless` は条件が false / nil の時に実行 (if の逆)。",
       reason:
         "`unless cond` は `if !cond` と等価で、否定条件を自然な英語で書けるシンタックスシュガー。後置 unless 修飾子も使えます: `do_something unless condition`。",
+      beginnerExplanation:
+        "`unless` は英語の「〜でない限り」「〜でなければ」をそのままコードにしたキーワードです。\n\n`unless 条件 then 本体 end` と書くと、**条件が偽 (false か nil) のときだけ** 本体が実行されます。これは `if !条件 then 本体 end` とまったく同じ意味です。\n\nなぜわざわざ unless があるかというと、否定形を `!` で書くと『!』が小さくて見落としやすいから。`unless user.admin?` は「管理者でない限り」と自然に読めますが、`if !user.admin?` は「もし NOT 管理者なら」とちょっと考える必要があります。\n\nさらに後置記法も便利です: `return unless valid?` は「正常でないならその場で return」という意味で、ガード節 (関数の冒頭で異常系を早めに抜ける書き方) によく使われます。\n\n注意点: `unless ... else` のように else 節を付けると逆さまの分岐になって読みにくいので避けます。否定条件の if が必要なときだけ unless を使う、というルールが目安です。",
+      modelSelfExplanation: {
+        conclusion:
+          "`unless cond` は cond が false または nil のときだけ本体を実行する。意味的に `if !cond` と等価で、否定条件を自然な英語で書くためのシンタックスシュガー。",
+        reason:
+          "Ruby の制御構文は『英語として自然に読めること』を重視して設計されており、否定条件のガードや早期 return を読み下し可能にするため unless が用意されている。Ruby の真偽判定では false と nil だけが falsy なので、unless の発火条件はその 2 値に限られる。後置修飾子も使えて `do_something unless condition` の 1 行で書ける。",
+        example:
+          "Rails のコントローラで「ログイン済みでなければサインインへ」というガードを `redirect_to new_session_path unless logged_in?` と 1 行で書ける。サービス層なら `raise InvalidInput unless params[:email].present?` のように、不正な状態を早く弾くのに使う。",
+        pitfall:
+          "`unless ... else` は二重否定で読みにくいので避け、`if cond ... else ... end` に書き直すのが定石 (RuboCop の Style/UnlessElse も警告)。同様に `unless a && !b` のような複合否定も混乱の元なので、条件を変数に抜き出すか if で書き直すと安全。",
+      },
       codeExample:
         'unless user.admin?\n  redirect_to root_path\nend\n# 同じ意味\nif !user.admin?\n  redirect_to root_path\nend\n\n# 後置記法\nreturn unless valid?\nputs "OK" unless errors.any?',
       commonMistakes: [
         "`unless ~ else` は読みにくいので避ける (RuboCop でも警告)。`if` で書き直す。",
         "複雑な条件 (`unless a && !b`) も避ける。否定の入れ子は混乱の元。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: 制御構造 (unless)",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fcontrol.html#unless",
+        },
+        {
+          label: "RuboCop Style/UnlessElse",
+          url: "https://docs.rubocop.org/rubocop/cops_style.html#styleunlesselse",
+        },
       ],
     },
   },
@@ -580,10 +608,29 @@ export const questions: Question[] = [
       summary: "`&.` (ぼっち演算子) はレシーバが nil なら nil を返す。",
       reason:
         "メソッドチェーンの途中で nil が来る可能性がある時、毎回 `if x` のガードを書かずに済みます。JavaScript の Optional Chaining (`?.`) や C# の `?.` と同等。",
+      beginnerExplanation:
+        "`&.` は **「ぼっち演算子 (lonely operator)」** と呼ばれます。`&` が一人ぼっちで座っている人に見えるのが名前の由来です。\n\n使い方は通常のメソッド呼び出しの `.` を `&.` に置き換えるだけ。違いは「レシーバ (左側のオブジェクト) が nil のときの振る舞い」です。\n\n- 通常の `user.name`: user が nil だと `NoMethodError: undefined method 'name' for nil` でクラッシュ。\n- `user&.name`: user が nil だと `nil` が返って何も起きない (短絡)。user が nil 以外なら通常通り name を呼ぶ。\n\nメソッドチェーンの途中で nil が来うる場面で特に便利です。`user&.profile&.name` と書けば、user か profile のどちらかが nil でも自然に nil が伝搬し、エラーになりません。\n\nJavaScript の Optional Chaining `user?.profile?.name` や C# の `?.` と同じ考え方です。Ruby 2.3 で導入されました。\n\n注意点: 『短絡するのは nil のときだけ』なので、false に対しては普通にメソッドが呼ばれます (`false&.to_s` は `\"false\"` を返す)。",
+      modelSelfExplanation: {
+        conclusion:
+          "演算子は `&.` (ぼっち演算子)。レシーバが nil なら短絡して nil を返し、それ以外なら通常通りメソッドを呼ぶ。",
+        reason:
+          "Ruby 2.3 で導入された Safe Navigation Operator で、nil の伝搬を 1 文字の記号で簡潔に書けるようにする糖衣構文。意味としては `x.nil? ? nil : x.foo` と等価だが、表現がコンパクトでメソッドチェーンが読みやすくなる。短絡判定は false ではなく nil 限定なので、ブール値を返すメソッドチェーンに対しても直感に近い挙動を保てる。",
+        example:
+          "Rails で `current_user&.admin?` を if 文の条件に置くと、未ログイン時 (nil) は nil = falsy として扱われ管理画面を非表示にできる。`order&.items&.sum(:total)` のような集計でも、order が無いケースを 1 行で安全に処理できる。",
+        pitfall:
+          "`&.` の乱用は本来の nil ガードを隠してバグの温床になる。『ここは nil でないはず』という設計上の前提がある場所では、明示的に `raise` で気付く方が安全。また `&.` で短絡したときは nil が返るので、後続のチェーンで `.length` 等を呼ぶと結局 NoMethodError になり得る点も注意。",
+      },
       codeExample:
         '# 従来\nname = user.nil? ? nil : user.profile.nil? ? nil : user.profile.name\n\n# &. を使うと\nname = user&.profile&.name\n\n# 配列のアクセス\narr&.[](0)        # 配列が nil でも安全\n\n# 注意: false に対しても呼ばれる (nil だけ短絡)\nfalse&.to_s       #=> "false" (呼ばれる)\nnil&.to_s         #=> nil    (呼ばれない)',
       commonMistakes: [
         "`&.` の乱用は nil 安全と見せかけて bug を隠す。本来 nil であってはならない箇所では明示的に検証する。",
+        "`&.` で nil を返したあと、後続のチェーンに非 `&.` の `.` が混ざると結局 NoMethodError になる。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: メソッド呼び出し (&. の項)",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fcall.html",
+        },
       ],
     },
   },
@@ -596,6 +643,12 @@ export const questions: Question[] = [
     code: 'a = "10"\nb = 20\nputs a + b.to_s\nputs a.to_i + b',
     choices: ["1020 / 30", "30 / 30", "1020 / 1020", "TypeError / 30"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。1 行目は文字列同士の `+` なので結合 (\"10\" + \"20\" = \"1020\")、2 行目は整数同士の `+` なので加算 (10 + 20 = 30)。",
+      "1 行目で文字列を整数として加算するには `a.to_i + b` のように変換が必要。`a + b.to_s` は文字列結合になる。",
+      "2 行目では a を `to_i` で整数にしているので、整数同士の加算となり 30 になる。文字列結合ではない。",
+      "両方とも明示的に型変換しているので TypeError にはならない。エラーになるのは型変換せずに混在させた場合 (`\"10\" + 20`)。",
+    ],
     hints: [
       "`+` は文字列同士、数値同士で挙動が違います。",
       "文字列 + 文字列 は結合、数値 + 数値 は加算。",
@@ -605,10 +658,33 @@ export const questions: Question[] = [
       summary: "型変換しないと文字列結合と加算が混在する。",
       reason:
         "Ruby は型に厳格 (strict typing) なので、`\"10\" + 20` のような暗黙変換はせず `TypeError` を投げます。明示的に `to_s` / `to_i` で揃える必要があります。",
+      beginnerExplanation:
+        "Ruby の `+` 演算子は、両側の型によって意味が変わる **オーバーロードされた演算子** です。\n\n- 文字列 + 文字列 → **連結** (`\"hello\" + \" world\"` → `\"hello world\"`)\n- 整数 + 整数 → **加算** (`10 + 20` → `30`)\n- 配列 + 配列 → **結合** (`[1] + [2]` → `[1, 2]`)\n\nだから 1 行目の `a + b.to_s` は文字列 `\"10\"` と文字列 `\"20\"` の連結で `\"1020\"`、2 行目の `a.to_i + b` は整数 10 と整数 20 の加算で 30 になります。\n\nここで重要なのは、**Ruby は型の自動変換 (暗黙変換) をしない** という性質です。JavaScript なら `\"10\" + 20` が `\"1020\"` になる (数値が文字列に勝手に変換される) ところを、Ruby は `TypeError: no implicit conversion of Integer into String` と例外を投げます。\n\n意図しない結果を防げる安全設計ですが、その代わり開発者が `to_s` や `to_i` を明示的に書いて型を揃える必要があります。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は 1 行目 `1020`、2 行目 `30`。Ruby の `+` は両辺の型で意味が変わり、文字列同士なら連結、整数同士なら加算になる。型混在のままだと TypeError なので明示変換が必須。",
+        reason:
+          "Ruby は静的型ではないが暗黙の型強制 (JS のような coercion) は行わない言語設計。Numeric#+ は数値同士、String#+ は文字列同士のみ受け取り、型違いには TypeError を投げる。これにより『数値と文字列をうっかり混ぜたバグ』を実行時に早く検知できる代わりに、開発者が to_s / to_i / to_f / Integer() / Float() などで明示変換する責務を負う。",
+        example:
+          "実務では、HTTP リクエストで受け取った params は基本すべて文字列なので、ID で DB を引くなら `User.find(params[:id].to_i)` のように整数化する。金額計算で `\"100\".to_i + tax` や、ログ出力で `\"User #{user.id}: #{age.to_s}\"` (実は文字列補間が自動 to_s してくれる) など、境界で型変換するのが定石。",
+        pitfall:
+          "`\"abc\".to_i` はエラーにならず 0 を返すので、入力バリデーション目的では使えない。厳密に検証したいなら Kernel の `Integer(\"abc\")` (例外を投げる) や正規表現マッチを併用する。逆に文字列補間 `\"#{x}\"` は自動的に to_s が呼ばれるので、ログや簡単な文字列組み立てでは明示変換不要。",
+      },
       codeExample:
         '"10" + "20"   #=> "1020"   # 文字列結合\n10 + 20       #=> 30       # 加算\n"10" + 20     #=> TypeError\n"10".to_i + 20 #=> 30\n10.to_s + "20" #=> "1020"',
       commonMistakes: [
         "JS 経験者が `\"10\" + 20` を 30 と勘違いするが、Ruby はエラー。明示変換が必要。",
+        "`to_i` は失敗時 0 を返すのでバリデーションには不向き。厳密な変換は `Integer(str)`。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: String#+",
+          url: "https://docs.ruby-lang.org/ja/latest/method/String/i/=2b.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Integer#+",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Integer/i/=2b.html",
+        },
       ],
     },
   },
@@ -626,6 +702,12 @@ export const questions: Question[] = [
       "2 と 3 の両方が定数として解釈される",
     ],
     answerIndex: 3,
+    choiceExplanations: [
+      "小文字始まりはローカル変数。`my_const = 100` は単なる変数で、定数の警告は出ない。",
+      "正しいが不完全。`MyConst` は確かに定数だが、`MY_CONST` も同じく定数として扱われる。",
+      "正しいが不完全。`MY_CONST` は確かに定数だが、`MyConst` (クラス名形式) も同じく定数。",
+      "正解。Ruby の構文ルールは『先頭が大文字かどうか』だけを見て定数判定する。CamelCase / SNAKE_CASE どちらも定数。",
+    ],
     hints: [
       "Ruby は変数か定数かを識別子の最初の文字で判定します。",
       "頭文字が大文字 = 定数、それ以外 = 変数。",
@@ -636,10 +718,32 @@ export const questions: Question[] = [
         "Ruby では頭文字が大文字ならすべて定数扱い (クラス名も定数の一種)。",
       reason:
         "Ruby は構文上の区別を識別子の頭文字で行います: 小文字始まり = ローカル変数、大文字始まり = 定数、`@` = インスタンス変数、`@@` = クラス変数、`$` = グローバル変数。クラス名 `User` も実は `Object` の定数。",
+      beginnerExplanation:
+        "Ruby は識別子 (名前) の **頭文字** を見て、それが何かを判断します。\n\n- `name` (小文字始まり) → ローカル変数\n- `Name` や `NAME` (大文字始まり) → **定数**\n- `@name` → インスタンス変数\n- `@@name` → クラス変数\n- `$name` → グローバル変数\n\n大事なのは「2 文字目以降の大小は関係ない」こと。`MaxSize`, `MAX_SIZE`, `Maxsize` すべて定数として解釈されます。慣習として、**普通の定数は SCREAMING_SNAKE_CASE (`MAX_SIZE`)、クラス名は CamelCase (`UserService`)** と使い分けますが、Ruby の構文上の扱いはどちらも同じ『定数』です。\n\n面白いのは `class User ... end` も実は「`User` という定数に Class オブジェクトを代入している」のと等価だということ。だから `User` という名前を呼べば対応するクラスにアクセスできます。\n\nRuby の定数は『再代入すると警告だけ出して許す』という緩めの設計です。本当に変更不可にしたいなら `.freeze` を付けます。",
+      modelSelfExplanation: {
+        conclusion:
+          "Ruby は識別子の頭文字が大文字なら無条件で定数扱いになる。`MyConst` (CamelCase) も `MY_CONST` (SCREAMING_SNAKE) も両方とも定数。",
+        reason:
+          "Ruby の lexer は識別子の先頭 1 文字でカテゴリを決定する設計で、変数 / 定数 / インスタンス変数 / クラス変数 / グローバル変数を 1 文字目で構文的に区別する。これにより『大文字で始まる名前を呼ぶと、現在のスコープにある定数を解決する』というルールが一貫して適用でき、クラス名 (User) や定数 (MAX_SIZE) を同じ仕組みで扱える。慣習的な使い分け (CamelCase = クラス / モジュール、SCREAMING_SNAKE = 値) は単なるコーディングスタイルで、構文上は同じ定数。",
+        example:
+          "`class User; end` は『User という定数に Class オブジェクトを代入する』のと等価で、`User = Class.new` と書くのとほぼ同じ。Rails の `MAX_LOGIN_ATTEMPTS = 5` や `DEFAULT_ROLE = :user` のような設定値も、`Admin = User` のようなエイリアスも全部同じ仕組みで動く。",
+        pitfall:
+          "Ruby の定数は『代入を変えると警告は出るが許される』緩い設計。さらに **中身が mutable なオブジェクトなら破壊的変更は警告も無く通る** (例: `LIST = []; LIST << 1` は警告なし)。本当に不変にしたいなら `LIST = [].freeze` のように freeze する、または Rails の `Hash#with_indifferent_access` のような不変ラッパを使う。",
+      },
       codeExample:
         'MAX_SIZE = 100      # 定数\nPi = 3.14           # これも定数\nclass User; end     # 定数 User に Class を代入しているのと同じ\n\n# 定数の再代入は警告\nMAX_SIZE = 200      # warning: already initialized constant MAX_SIZE\n\n# でも中身は変更できる (mutable オブジェクトの場合)\nLIST = []\nLIST << 1           # 警告なし',
       commonMistakes: [
         "定数は値の再代入で警告するが、中身の変更 (mutate) は防げない。`.freeze` で対策。`LIST = [].freeze`",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: 変数と定数",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fvariables.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Object#freeze",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Object/i/freeze.html",
+        },
       ],
     },
   },
@@ -657,6 +761,12 @@ export const questions: Question[] = [
       "[1,2,3] / [1,2,3,4]",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`a = a + [4]` で a の指す先だけが新配列に更新される。b は元の配列を指したままなので [1,2,3]。",
+      "両方 [1,2,3,4] になるのは `a << 4` のような破壊的操作の場合。`a + [4]` は新配列を返すので b には影響しない。",
+      "`a = a + [4]` で a の参照は確かに切り替わるので [1,2,3,4] になる。a が変わっていない結果は誤り。",
+      "順序が逆。再代入されたのは a の方なので a が [1,2,3,4]。b は元の配列を指し続けて [1,2,3] のまま。",
+    ],
     hints: [
       "`a + [4]` は新しい配列を返します (非破壊)。",
       "`a = ...` で a の参照先が新しい配列に変わります。",
@@ -667,10 +777,32 @@ export const questions: Question[] = [
         "`+` は新しい配列を返すので、a を再代入しても b には影響しない。",
       reason:
         "Ruby の代入は『参照のコピー』。`a + [4]` は新しい Array を生成し、`a = ...` で a の指す先を更新するだけ。元の配列は変わらず、b はそれを指したまま。一方 `a << 4` や `a.push(4)` だと破壊的で b も変わって見えます。",
+      beginnerExplanation:
+        "Ruby の変数は『箱』ではなく『矢印 (参照)』だと考えると、この挙動が腑に落ちます。\n\n1. `a = [1, 2, 3]` → メモリ上に配列 [1,2,3] が 1 つ作られ、a がそれを指す矢印になる。\n2. `b = a` → b は a と同じ配列を指す矢印になる。**コピーは作られない**。\n3. `a = a + [4]` → `a + [4]` は **新しい配列 [1,2,3,4]** を作って返す。続く `a = ...` で a の矢印を新配列に **付け替える**。元の配列 [1,2,3] は変更されていない。b はそれを指したまま。\n4. 結果: a は [1,2,3,4] (新配列)、b は [1,2,3] (元の配列のまま)。\n\n**ここがポイント**: `+` は非破壊的 (新オブジェクトを返す) だから、`a` の矢印を付け替えるだけで `b` には影響しません。\n\n対比として `a << 4` を使うと話は変わります。`<<` は **元の配列を直接書き換える** 破壊的メソッド。b と a が同じ配列を指しているので、a << 4 の後は b 経由で見ても [1,2,3,4] になっています。\n\nそして `+=` は罠です。`a += [4]` は `a = a + [4]` の糖衣構文 (非破壊)。見た目が破壊的に見えても実は新配列を作って付け替えているだけ。だから `<<` と `+=` は挙動が違うんです。",
+      modelSelfExplanation: {
+        conclusion:
+          "a は [1,2,3,4]、b は [1,2,3]。`a + [4]` が新しい配列を生成し、`a = ...` で a の参照を付け替えるだけだから、元の配列を指す b は変化しない。",
+        reason:
+          "Ruby の変数はオブジェクトへの参照で、代入は『矢印の付け替え』。`Array#+` は新しい配列インスタンスを返す非破壊的メソッドで、レシーバ側を一切変更しない。`a = a + [4]` は『a が指す配列に対し + を計算 → 新配列を生成 → a の矢印だけを更新』という 3 段階の操作で、b は元の配列を指し続ける。破壊的に追加する `<<` (push の別名) や `concat` は元の配列を書き換えるため、共有参照経由で b 側にも影響が見える。",
+        example:
+          "メソッド引数の防御として『副作用を出したくないので新配列を返す』のが Ruby の慣用句。例えば `def add(arr, x); arr + [x]; end` なら呼び出し側に影響を与えない。逆に意図せず `arr << x` を書くと、呼び出し側のオブジェクトを書き換えてしまい、デバッグしにくいバグになる。Rails の has_many コレクションでも、`@user.posts + Post.recent` (新配列) と `@user.posts << post` (DB に保存される破壊的追加) では意味がまったく違う。",
+        pitfall:
+          "`+=` は破壊的に見えて実は非破壊的という Ruby の有名な罠。`a += [4]` は `a = a + [4]` の糖衣構文で、新オブジェクトを作って付け替えるだけ。一方 `<<` や `push` や `concat` は元のオブジェクトを直接書き換える。共有参照がある場面では『非破壊 = a を再代入で切り替え』『破壊 = a と b 両方に影響』を意識しないとバグの原因になる。",
+      },
       codeExample:
         "a = [1, 2, 3]\nb = a       # b と a は同じオブジェクトを指す\n\na = a + [4] # 新しい配列が a に\na  #=> [1,2,3,4]\nb  #=> [1,2,3]\n\n# 破壊的にすると\na = [1, 2, 3]\nb = a\na << 4\nb  #=> [1,2,3,4]   ← b も変わる",
       commonMistakes: [
         "`+=` も `<<` も同じだと思いがちだが、`a += [4]` は `a = a + [4]` の糖衣構文で非破壊。`<<` だけが破壊的。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Array#+",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Array/i/=2b.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Array#<< (push)",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Array/i/=3c=3c.html",
+        },
       ],
     },
   },
