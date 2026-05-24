@@ -17,6 +17,24 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-27-b",
+    date: "2026-05-27",
+    title: "📊 Study Guide に Mermaid 図表を追加",
+    badge: "feat",
+    highlights: [
+      "📊 各章のセクションに任意で Mermaid 図 (flowchart / sequenceDiagram / gitGraph 等) を埋め込めるように",
+      "🎨 ダークモード追随 — light/dark で配色を自動切替",
+      "⚡ mermaid 本体は動的 import (~200KB) で初回描画時にだけ読み込み",
+      "🔧 Git 1.1 (3 エリア) / 2.2 (merge) / 2.3 (rebase) — gitGraph / flowchart",
+      "🐧 Linux 4.1 — stdin/stdout/stderr の流れ図",
+      "🛡️ InfoSec 4.1 (CSRF sequence) / 6.3 (SSRF sequence)",
+      "🗃️ SQL 4.2 — INNER/LEFT/RIGHT/FULL JOIN の比較図",
+      "⚛️ React 7.1 — Suspense Streaming SSR sequence",
+      "▲ Next.js 3.4 — 4 層キャッシュの全体図",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-27-a",
     date: "2026-05-27",
     title: "📱 PWA 化 + モバイル下部ナビ + オフライン読了",
