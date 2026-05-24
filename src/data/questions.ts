@@ -3179,6 +3179,12 @@ export const questions: Question[] = [
       "Devise の制約",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "Turbo はステータスコードで挙動を切り替えるため、200 だとフォーム再表示が機能しない。慣習ではなく仕様。",
+      "正解。Turbo は『2xx → リダイレクト or 成功、4xx → フォーム再表示』というルールでレスポンスを判定する。422 で返さないとエラー表示が動かない。",
+      "Rails 自体は 200 で render しても例外は投げない。問題は Turbo の挙動。",
+      "Devise とは無関係。Hotwire (Turbo) 全体の挙動。",
+    ],
     hints: [
       "Turbo はフォームの内容を Turbo Stream として再描画する。",
       "200 OK だとリダイレクト扱いになってフォームが消えてしまう。",
@@ -3189,8 +3195,30 @@ export const questions: Question[] = [
         "Turbo はフォーム送信失敗時に 4xx を期待。`status: :unprocessable_entity` (422) で再 render する。",
       reason:
         "Rails 7 の Turbo は、フォーム送信レスポンスを判定: 2xx ならリダイレクト/成功、4xx ならフォーム再表示として `<turbo-frame>` を差し替える。200 で再 render するとフォームが破棄され画面が空白になる。",
+      beginnerExplanation:
+        "**Turbo (Hotwire の一部)** は Rails 7 から標準採用された **SPA ライクな UX を提供する仕組み** で、フォーム送信の扱いが従来とは少し違います。\n\n**Turbo の判定ルール**:\n- レスポンス **2xx** (200 OK 等) → 成功、リダイレクト処理\n- レスポンス **4xx / 5xx** → 失敗、フォーム部分を差し替えて再表示\n\n**従来 (Rails 6 以前) の書き方**:\n```ruby\ndef create\n  @post = Post.new(post_params)\n  if @post.save\n    redirect_to @post\n  else\n    render :new                              # 200 OK\n  end\nend\n```\n\n**Rails 7 + Turbo の書き方**:\n```ruby\ndef create\n  @post = Post.new(post_params)\n  if @post.save\n    redirect_to @post, notice: 'Created'\n  else\n    render :new, status: :unprocessable_entity  # ← 422 を明示\n  end\nend\n```\n\n**`status:` を付け忘れると**:\n- Turbo は 200 を成功と解釈\n- 『成功だがリダイレクトしていない』奇妙な状態としてフォームが消えて画面が真っ白に\n- ユーザーは『送信されたのか分からない』状態\n\n**よく使うステータス**:\n- `:unprocessable_entity` (422) — バリデーションエラー\n- `:forbidden` (403) — 権限なし\n- `:not_found` (404)\n\n**generator が生成するコード** (Rails 7+) は最初から `status: :unprocessable_entity` を付けてくれます。手動で書く時に忘れがちなので注意。\n\n**Tip**: `turbo_frame` や `turbo_stream` を使うとレスポンス形式も変わるので、`respond_to do |format|` で `format.turbo_stream` と `format.html` を分岐するパターンも頻出します。",
+      modelSelfExplanation: {
+        conclusion:
+          "Turbo は『2xx ならリダイレクト/成功、4xx ならフォーム再表示』というルールでレスポンスを処理する。フォームバリデーション失敗時は 4xx (代表的には 422 unprocessable_entity) を返さないと、Turbo が再表示しようとせずフォームが消えて画面が崩壊する。",
+        reason:
+          "Rails 7 から標準採用された Hotwire (Turbo) は SPA ライクな UX を提供するため、HTTP レスポンスをページ全体ではなく『差分の HTML フラグメント』として処理する。フォーム送信の成否判定もステータスコード基準で行うので、従来の Rails 6 以前のように 200 で render :new するだけでは Turbo が誤動作する。Rails 7+ の generator は最初から `status: :unprocessable_entity` を付けてくれるが、手書きや古いコードでは忘れがち。",
+        example:
+          "`PostsController#create` で `if @post.save; redirect_to @post; else; render :new, status: :unprocessable_entity; end` のように書くのが Rails 7+ の定型。`update` アクションも同様に edit ページに `render :edit, status: :unprocessable_entity` で戻す。turbo_frame_tag で囲まれたフォームなら、422 レスポンスの該当フレームだけが差し替わる。",
+        pitfall:
+          "Rails 6 以前のチュートリアルやサンプルコードには `status:` 指定がなく、Rails 7 でそのまま使うと Turbo が誤動作する。`turbo` を完全に無効化するには `data: { turbo: false }` をフォームに付けるか、Gemfile から削除する。さらに、API モード (jbuilder で JSON 返却) では JSON のステータスとして 422 を返す方が REST 的に正しい。Turbo Stream で部分更新したい場合は `respond_to do |format|` で format.turbo_stream を分岐する。",
+      },
       codeExample:
         'def create\n  @post = Post.new(post_params)\n  if @post.save\n    redirect_to @post, notice: "Created"\n  else\n    render :new, status: :unprocessable_entity  # ← 重要 (422)\n  end\nend\n\ndef update\n  if @post.update(post_params)\n    redirect_to @post\n  else\n    render :edit, status: :unprocessable_entity\n  end\nend',
+      commonMistakes: [
+        "Rails 6 以前のチュートリアルを Rails 7 にそのまま適用 → フォーム失敗時に画面が消える。",
+        "API モードで 200 + エラー JSON を返してしまう。RESTful には 422 (or 適切な 4xx) で返す。",
+      ],
+      references: [
+        {
+          label: "Turbo Handbook — Form Responses (公式)",
+          url: "https://turbo.hotwired.dev/handbook/drive#redirecting-after-a-form-submission",
+        },
+      ],
     },
   },
   {
@@ -3207,6 +3235,12 @@ export const questions: Question[] = [
       "ルーティングエラーを捕まえる",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`rescue_from` はコントローラのクラスマクロで、アクション内で発生した例外を共通処理に振り分ける。404/403/500 ページの一元管理や API エラー JSON 返却で頻出。",
+      "Model のバリデーションエラーは例外ではなく `errors` に積まれる戻り値ベースの仕組み。rescue_from の対象は ActiveRecord::RecordInvalid (! 系の例外) のみ。",
+      "View のレンダリングエラーは ActionView::Template::Error として上がるが、本来は『例外を出さない View 設計』が望ましい。rescue_from の主用途ではない。",
+      "ルーティングエラー (ActionController::RoutingError) は通常コントローラに届く前に発生するため、別途 application.rb の config.exceptions_app などで処理する。",
+    ],
     hints: [
       "コントローラのクラスマクロ。",
       "特定の例外クラスをコントローラレベルでハンドリングする。",
@@ -3217,8 +3251,31 @@ export const questions: Question[] = [
         "`rescue_from` はコントローラ内で発生した例外を共通ハンドリングする宣言。",
       reason:
         "全アクションで try/rescue を書く代わりに、ApplicationController で `rescue_from ActiveRecord::RecordNotFound` などまとめてハンドルできる。404/403/500 ページ生成や、API エラー JSON 返却に便利。",
+      beginnerExplanation:
+        "**`rescue_from`** は **コントローラ内で発生した例外を共通処理に振り分ける** クラスマクロです。\n\n**基本パターン**:\n```ruby\nclass ApplicationController < ActionController::Base\n  rescue_from ActiveRecord::RecordNotFound, with: :not_found\n  rescue_from Pundit::NotAuthorizedError, with: :forbidden\n  rescue_from StandardError, with: :server_error if Rails.env.production?\n\n  private\n\n  def not_found\n    render 'errors/404', status: :not_found\n  end\n\n  def forbidden\n    render 'errors/403', status: :forbidden\n  end\n\n  def server_error(e)\n    Rails.logger.error(e.full_message)\n    render 'errors/500', status: :internal_server_error\n  end\nend\n```\n\n**何が嬉しいか**:\n- 全コントローラの全アクションで `begin; ... rescue ...; end` を書かなくて済む\n- エラーレスポンスを 1 箇所に集約 → 一貫性を保てる\n- 404/403/500 ページの統一デザイン\n\n**API エンドポイントなら JSON で返す**:\n```ruby\nclass Api::BaseController < ActionController::API\n  rescue_from ActiveRecord::RecordNotFound do |e|\n    render json: { error: 'Not Found' }, status: :not_found\n  end\n\n  rescue_from ActionController::ParameterMissing do |e|\n    render json: { error: e.message }, status: :bad_request\n  end\nend\n```\n\n**ハンドラの定義方法**:\n```ruby\n# シンボル (private メソッド名)\nrescue_from MyError, with: :handle_my_error\n\n# ブロック (例外オブジェクトを受け取れる)\nrescue_from MyError do |e|\n  render json: { error: e.message }, status: 422\nend\n```\n\n**捕捉順**: `rescue_from` は **後に書いたものが優先** されます (上書き)。子コントローラで親の挙動を変えたい時に便利。\n\n**注意**:\n- `rescue_from StandardError` は便利だが、開発環境では rescue されてしまうとデバッグ情報が見えにくくなる → `if Rails.env.production?` で本番限定にする\n- `Exception` は捕捉してはいけない (SystemExit / Interrupt まで捕まえる)\n- ルーティングエラーは rescue_from では捕まらない (コントローラに到達する前) → `config.exceptions_app` で対応\n\n**実務でよくセットアップする例外**:\n- `ActiveRecord::RecordNotFound` → 404\n- `ActiveRecord::RecordInvalid` → 422 (API)\n- `Pundit::NotAuthorizedError` / `CanCan::AccessDenied` → 403\n- `ActionController::ParameterMissing` → 400 (API)\n- `StandardError` → 500 (本番限定)",
+      modelSelfExplanation: {
+        conclusion:
+          "`rescue_from` はコントローラのクラスマクロで、『特定の例外クラスが発生したらこのハンドラを呼ぶ』を宣言する。全アクションに散在する begin/rescue を共通化でき、ApplicationController で 404 / 403 / 500 ページや API エラー JSON を一元管理するための定番。",
+        reason:
+          "コントローラレベルでの例外処理は『全アクションに try/rescue を書く』『各 controller で同じハンドリングを繰り返す』という DRY 違反を生みやすい。Rails の rescue_from はこれをクラスマクロで宣言的に書けるようにし、複数の例外クラスをそれぞれ別のハンドラに振り分けたり、子クラスで親の挙動を上書きしたりできる。404 ページの統一デザイン、API のエラーレスポンス標準化、認可失敗時の共通対応など、横断的関心事 (cross-cutting concerns) を局所化する重要な仕組み。",
+        example:
+          "ApplicationController で `rescue_from ActiveRecord::RecordNotFound, with: :not_found` を宣言すれば、全コントローラの `Post.find(params[:id])` 失敗が自動で 404 ページに。Pundit の認可失敗は `rescue_from Pundit::NotAuthorizedError, with: :forbidden` で 403 へ。API なら `rescue_from ActiveRecord::RecordInvalid do |e| render json: { errors: e.record.errors }, status: 422 end` でバリデーション失敗を統一 JSON 形式に。",
+        pitfall:
+          "`rescue_from StandardError` は本番では便利だが、開発環境で有効にすると Rails のエラーページや better_errors が機能せずデバッグ情報が見えにくくなるので `if Rails.env.production?` で限定。`Exception` 捕捉は SystemExit や Interrupt まで握りつぶす危険があり禁止。ルーティングエラーは rescue_from では拾えない (コントローラ到達前なので) ため、`config.exceptions_app = self.routes` などで別途処理する。さらに 1 つの例外に対し複数の rescue_from を書くと『後に書いた方が優先』される子クラスでの上書きパターンも頻出。",
+      },
       codeExample:
         "class ApplicationController < ActionController::Base\n  rescue_from ActiveRecord::RecordNotFound, with: :not_found\n  rescue_from Pundit::NotAuthorizedError, with: :forbidden\n  rescue_from StandardError, with: :server_error if Rails.env.production?\n\n  private\n\n  def not_found\n    render 'errors/404', status: :not_found\n  end\n\n  def forbidden\n    render 'errors/403', status: :forbidden\n  end\nend",
+      commonMistakes: [
+        "`rescue_from Exception` は SystemExit / Interrupt まで握りつぶす。必ず StandardError 系に絞る。",
+        "開発環境で rescue_from StandardError を有効化 → エラーページが見えず原因不明に。`if Rails.env.production?` で本番限定。",
+        "ルーティングエラーは rescue_from では拾えない。config/application.rb の exceptions_app などで対応。",
+      ],
+      references: [
+        {
+          label: "Rails API: ActiveSupport::Rescuable (rescue_from)",
+          url: "https://api.rubyonrails.org/classes/ActiveSupport/Rescuable/ClassMethods.html",
+        },
+      ],
     },
   },
 
