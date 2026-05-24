@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-i",
+    date: "2026-05-24",
+    title: "Ruby 基礎 rb-021〜025 の解説拡充 (Phase 5)",
+    badge: "content",
+    highlights: [
+      "rb-021 (strip) / rb-022 (split + map) / rb-023 (Date 加算) / rb-024 (Time.now vs Time.current) / rb-025 (File.open ブロック形式)",
+      "文字列正規化・コレクション操作・日時・ファイル I/O の実務頻出パターンを深掘り",
+      "残り 5 問 (rb-026〜030) は次の PR で ruby-basics 完走予定",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-h",
     date: "2026-05-24",
     title: "Ruby 基礎 rb-016〜020 の解説拡充 (Phase 4)",
