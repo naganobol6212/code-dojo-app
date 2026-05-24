@@ -11,7 +11,10 @@ export type TrackId =
   | "nextjs"
   | "nuxt"
   | "python"
-  | "sql";
+  | "sql"
+  | "git"
+  | "infosec"
+  | "linux";
 
 export type Track = {
   id: TrackId;

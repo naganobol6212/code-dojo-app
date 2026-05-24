@@ -82,6 +82,36 @@ export const tracks: Track[] = [
     ringClass: "hover:ring-indigo-500/40",
     status: "available",
   },
+  {
+    id: "git",
+    name: "Git & GitHub",
+    short: "Git",
+    emoji: "🔧",
+    description: "branch 戦略 / PR / rebase / conflict / gh CLI / bisect",
+    accentClass: "from-slate-500/20 to-zinc-500/5",
+    ringClass: "hover:ring-slate-500/40",
+    status: "available",
+  },
+  {
+    id: "infosec",
+    name: "セキュリティ",
+    short: "Security",
+    emoji: "🛡️",
+    description: "OWASP Top10 / XSS / CSRF / SQLi / 認証認可 / 暗号化",
+    accentClass: "from-red-500/20 to-orange-500/5",
+    ringClass: "hover:ring-red-500/40",
+    status: "available",
+  },
+  {
+    id: "linux",
+    name: "Linux & CLI",
+    short: "Linux",
+    emoji: "🐧",
+    description: "find/grep/sed/awk / パイプ / ssh / 権限 / プロセス",
+    accentClass: "from-zinc-500/20 to-stone-500/5",
+    ringClass: "hover:ring-zinc-500/40",
+    status: "available",
+  },
 ];
 
 export const findTrack = (id: string) => tracks.find((t) => t.id === id);
