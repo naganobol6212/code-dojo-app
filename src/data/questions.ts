@@ -3237,6 +3237,12 @@ export const questions: Question[] = [
       "ensure :name, present: true",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "`validate` (単数) はカスタムバリデーションメソッド名を渡すための DSL。標準ルール (presence など) は使えない。`validates` (複数) と混同しやすい罠。",
+      "正解。`validates :属性, ルール: 値` が標準のバリデーション宣言形式。複数形であることに注意。",
+      "`validation` というメソッドは存在しない。さらにオプション名も `presence` であって `required` ではない。",
+      "`ensure` は例外処理 (begin/rescue/ensure) のキーワードで、ActiveRecord と無関係。",
+    ],
     hints: [
       "`validate` (単数) と `validates` (複数) は別物。",
       "標準のバリデーションは `validates` (複数形)。",
@@ -3247,8 +3253,30 @@ export const questions: Question[] = [
         "標準バリデーションは `validates :属性, ルール: 値`。`validate`(単数) はカスタムメソッド用。",
       reason:
         "Rails は `validates` (複数) を提供。`validate` (単数) はカスタムメソッド名を渡すのに使う。間違うと意外と気付かれずに『バリデーションが動かない』状態になる。",
+      beginnerExplanation:
+        "ActiveRecord のバリデーション宣言には **2 つの似たメソッド** があり、初学者が必ずハマるポイントです。\n\n**`validates` (複数形)** — 標準バリデーション用\n```ruby\nvalidates :name,  presence: true, length: { maximum: 50 }\nvalidates :email, presence: true, uniqueness: true,\n                  format: { with: URI::MailTo::EMAIL_REGEXP }\nvalidates :age,   numericality: { greater_than_or_equal_to: 0 }\n```\n\n**`validate` (単数形)** — カスタムバリデーションメソッド用\n```ruby\nvalidate :name_must_not_contain_admin\n\nprivate\n\ndef name_must_not_contain_admin\n  errors.add(:name, \"can't include 'admin'\") if name&.include?('admin')\nend\n```\n\n**標準ルール (validates で使える)**:\n- `presence: true` — 必須\n- `uniqueness: true` — DB 内でユニーク\n- `length: { minimum: 6, maximum: 100 }` — 文字数\n- `format: { with: /\\A.+@.+\\z/ }` — 正規表現\n- `numericality: { greater_than: 0 }` — 数値の範囲\n- `inclusion: { in: %w[draft published] }` — 列挙値\n- `confirmation: true` — `password_confirmation` 一致\n\n**間違うと**: `validate :name, presence: true` のように単数 `validate` で書くと、Ruby としてはエラーにならず **黙ってバリデーションが動かない** 状態になります (`:name` がメソッド名と解釈され、`presence: true` がオプションとして無視される)。本番でデータ汚染が起きるまで気付かない、というのが典型的なバグです。\n\n**実行タイミング**: `save` / `update` / `valid?` 時に走り、失敗時は `errors` に詳細が積まれ、`save` が false を返す (`save!` は例外)。",
+      modelSelfExplanation: {
+        conclusion:
+          "正解は `validates :name, presence: true`。複数形の `validates` が標準バリデーション用のクラスマクロで、属性名 + 検証ルールのハッシュを渡す。単数の `validate` はカスタムバリデーションメソッド名を登録するための別物。",
+        reason:
+          "Rails は宣言的なバリデーション DSL を提供しており、`validates` 1 つの呼び出しで複数のルール (presence / length / format / uniqueness など) を組み合わせられる。これは ActiveModel::Validations の仕組みに基づき、内部的には各ルールを Validator クラスとして登録 → save 時に順に評価する。`validate` (単数) はカスタムロジックを書きたいときの『メソッド名を登録する』用途で、似ているが役割が異なる。命名が紛らわしいのは Rails の歴史的経緯による既知の落とし穴。",
+        example:
+          "ユーザモデルで `validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: URI::MailTo::EMAIL_REGEXP }` のように 1 行で 3 ルール。複雑な業務ルール (例: 営業時間内のみ予約可) はカスタム validate メソッドに切り出し、`validate :within_business_hours` で登録。コントローラ側では `if @user.save; redirect_to user_path; else; render :new, status: :unprocessable_entity; end` の形でエラー画面に分岐。",
+        pitfall:
+          "`validate :name, presence: true` のように単数 `validate` を間違って使うと、Ruby としてはエラーにならず黙ってバリデーションが効かない『静かなバグ』になる。テストで明示的に `expect(User.new.tap(&:valid?).errors[:name]).to include(\"can't be blank\")` のようなチェックを書くか、rubocop-rails の検出に頼る。さらに DB 制約と validation の二重化を忘れない: validation は『アプリ内の安全網』、DB 制約 (NOT NULL, UNIQUE) は『最後の砦』として両方掛けるのが原則。",
+      },
       codeExample:
         "class User < ApplicationRecord\n  validates :name,  presence: true, length: { maximum: 50 }\n  validates :email, presence: true, uniqueness: true,\n                    format: { with: URI::MailTo::EMAIL_REGEXP }\n  validates :age,   numericality: { greater_than_or_equal_to: 0 }\n\n  validate :name_must_not_contain_admin  # カスタム\n\n  private\n\n  def name_must_not_contain_admin\n    errors.add(:name, \"can't include 'admin'\") if name&.include?(\"admin\")\n  end\nend",
+      commonMistakes: [
+        "`validate` (単数) と `validates` (複数) を取り違える。前者はカスタム用、後者は標準ルール用。",
+        "uniqueness バリデーションだけでは並行 INSERT の競合を防げない。DB に UNIQUE インデックスも必須。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Active Record Validations (公式)",
+          url: "https://guides.rubyonrails.org/active_record_validations.html",
+        },
+      ],
     },
   },
   {
@@ -3260,6 +3288,12 @@ export const questions: Question[] = [
       "`Post.where(published: true).order(:created_at)` のような共通クエリを再利用可能にする ActiveRecord の機能は？",
     choices: ["scope", "where_chain", "filter", "queryable"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`scope :name, -> { ... }` でクエリに名前を付け、`Post.published.recent` のようにチェーンできる ActiveRecord の標準機能。",
+      "ActiveRecord には `where_chain` というクラスマクロは存在しない。WhereChain は内部のクラスで、`where.not(...)` のような書き方の裏で使われる。",
+      "Rails には `filter` というクエリ DSL はない。Enumerable#filter とは別物。",
+      "`queryable` という ActiveRecord メソッドは存在しない。意味的には scope が担当。",
+    ],
     hints: [
       "Model 内に名前を付けてクエリを保存する仕組み。",
       "`scope :name, -> { ... }` と書きます。",
@@ -3270,8 +3304,30 @@ export const questions: Question[] = [
         "scope はクエリの再利用ブロック。チェーン可能で読みやすい。",
       reason:
         "scope は ActiveRecord::Relation を返すラムダ。チェーンしても 1 つのクエリにまとまる。クラスメソッドでも同じことができるが、引数なしの単純なものは scope の方が宣言的。",
+      beginnerExplanation:
+        "**scope** は ActiveRecord の **『よく使うクエリに名前を付けて再利用する』** 仕組みです。\n\n**従来 (重複)**:\n```ruby\nPost.where(published: true).order(created_at: :desc)\nPost.where(published: true).where(featured: true)\nPost.where(published: true).where('created_at > ?', 1.week.ago)\n```\n同じ `where(published: true)` を何度も書いて DRY 違反。\n\n**scope で集約**:\n```ruby\nclass Post < ApplicationRecord\n  scope :published, -> { where(published: true) }\n  scope :recent,    -> { order(created_at: :desc) }\n  scope :featured,  -> { where(featured: true) }\n  scope :by_year,   ->(year) { where(year: year) }   # 引数付き\nend\n\nPost.published.recent\nPost.published.featured.by_year(2024)\n```\nクエリが **英文のように読める** ようになり、変更も 1 箇所で済みます。\n\n**特徴**:\n- ラムダで包む (`-> { ... }`) ことで遅延評価される (毎回最新の値を使う、例えば `Time.current`)\n- 必ず Relation を返す (= チェーン可能)\n- nil を返したい場合は `none` を使う (`scope :recent, -> { where(...) || none }`)\n\n**scope vs クラスメソッド**: 単純なものは scope、複雑なロジック (引数チェック、分岐) はクラスメソッドの方が読みやすい:\n```ruby\nscope :recent, -> { where('created_at > ?', 1.week.ago) }       # シンプル\n\ndef self.search(query)\n  return all if query.blank?\n  where('title LIKE ?', \"%#{sanitize_sql_like(query)}%\")\nend                                                              # 複雑\n```\n\n**注意**: scope のブロック内で `nil` を返すと意図せず `Post.all` のように振る舞ってしまう (Rails 4 から `none` を返すのが推奨)。",
+      modelSelfExplanation: {
+        conclusion:
+          "正解は `scope`。ActiveRecord のクラスマクロで、よく使う `where` / `order` / `joins` などの組み合わせに名前を付けて再利用可能にし、チェーン可能なクエリ DSL を提供する。",
+        reason:
+          "scope は内部的に『ラムダを受け取り、それを返すクラスメソッドを定義する』だけのシンプルな仕組みで、戻り値は ActiveRecord::Relation。Relation 同士は `.merge` でつなげられるので、`Post.published.recent.where(user_id: 1)` のように DSL 的にチェーンできる。クエリのドメイン用語化 (例: `published`, `featured`, `recent`) によりコードが業務概念で読めるようになり、変更の影響範囲も Model 内に閉じる。",
+        example:
+          "Rails アプリで頻出: `User.active.admin.recent_login` のように複数 scope のチェーンで複雑な条件を表現、`Order.between(today.beginning_of_month, today.end_of_month).completed.sum(:total)` で月次売上集計、`Post.published.includes(:author).recent.limit(10)` でトップページ用記事取得。Controller や View で生の where を書く代わりに scope を使うことで、ビジネスルールがモデルに集約される。",
+        pitfall:
+          "scope の中で `nil` や false を返すと『条件無し』として扱われ意図しないクエリになる。Rails 4 からは `none` (空 Relation) を返すのが推奨。さらに scope を多用すると Model が肥大化しやすいので、複雑な検索条件は Query Object パターン (`PostSearchQuery.new(scope, params).call`) に切り出すと管理しやすい。引数付き scope は遅延評価を活用できるが、引数が多くなるとクラスメソッドの方が引数バリデーションを書きやすい。",
+      },
       codeExample:
         "class Post < ApplicationRecord\n  scope :published, -> { where(published: true) }\n  scope :recent,    -> { order(created_at: :desc) }\n  scope :by_year,   ->(year) { where(year: year) }\nend\n\nPost.published.recent.by_year(2024)\n# SELECT * FROM posts WHERE published=true AND year=2024\n# ORDER BY created_at DESC\n\n# クラスメソッドでも同等\ndef self.published\n  where(published: true)\nend",
+      commonMistakes: [
+        "scope のブロックで条件によって nil を返してしまう → 意図せず全件取得になる。`none` を返す。",
+        "scope が多すぎて Model が肥大化したら Query Object に分離する。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Active Record Query — Scopes (公式)",
+          url: "https://guides.rubyonrails.org/active_record_querying.html#scopes",
+        },
+      ],
     },
   },
   {
@@ -3288,6 +3344,12 @@ export const questions: Question[] = [
       "Ruby のバージョンが古い時",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "DB 接続不可は例外 (ActiveRecord::ConnectionNotEstablished) で、false ではなく即落ちる。save が false を返す通常の理由ではない。",
+      "正解。`save` は内部で validation を実行し、失敗すると false を返す (例外は投げない)。これが最も典型的な失敗パターン。",
+      "メソッド不在は NoMethodError 例外で即時クラッシュ。save が false を返すこととは別物。",
+      "Ruby バージョンの問題はそもそもアプリが起動しないので、save 単体の挙動には関係ない。",
+    ],
     hints: [
       "`save` はバリデーションを実行します。",
       "バリデーション失敗時は false を返す (例外を投げない)。",
@@ -3298,8 +3360,30 @@ export const questions: Question[] = [
         "save はバリデーション失敗で false を返す。save! は例外。",
       reason:
         "`save` / `update` は失敗時 false を返すので、`if @user.save` で分岐するのが定石。例外で確実に検知したいなら `save!` / `update!` / `create!`。トランザクション内では例外でないとロールバックされない点に注意。",
+      beginnerExplanation:
+        "ActiveRecord の `save` メソッドの **挙動** を正しく理解するのは重要です。\n\n**`save` の流れ**:\n1. バリデーション (`validates` で宣言したルール) を実行\n2. 失敗があれば `errors` に詳細を積み、**false を返して終了** (例外は投げない)\n3. 成功すれば DB に INSERT/UPDATE して **true を返す**\n\n**典型的な分岐パターン**:\n```ruby\nif @user.save\n  redirect_to @user, notice: '保存しました'\nelse\n  render :new, status: :unprocessable_entity\n  # @user.errors を View で表示\nend\n```\n\n**`!` 付きメソッド**: `save!` / `update!` / `create!` は失敗時に **例外** (`ActiveRecord::RecordInvalid`) を投げます。\n\n**使い分け**:\n- ユーザー入力 → `save` (失敗は想定内、エラーを画面に表示)\n- システム内部の保存で『失敗するはずがない』 → `save!` (失敗したら即座に例外で気付く)\n- **トランザクション内では必ず `!` 系**: トランザクションは例外でしかロールバックされないため:\n\n```ruby\nActiveRecord::Base.transaction do\n  user.save!     # 失敗すれば例外\n  account.save!  # 例外で両方ロールバック\nend\n\n# ❌ NG: save (例外なし) だと部分保存になる\nActiveRecord::Base.transaction do\n  user.save     # false でも継続\n  account.save  # user が壊れた状態で account も保存\nend\n```\n\n**`update_columns` / `update_all` の罠**: これらは **validation も callback もスキップ** する。データ汚染を起こしやすいので、業務ロジックでは原則使わない (rake task で慎重に使うレベル)。",
+      modelSelfExplanation: {
+        conclusion:
+          "`save` が失敗する最も典型的な原因は **バリデーション失敗**。`save` は内部で validation を実行し、失敗すると false を返して `errors` に詳細を積む。例外は投げないので呼び出し側で if 分岐するのが定石。",
+        reason:
+          "ActiveRecord の `save` はトランザクション → validation → callback → SQL 発行 → callback の流れで動き、validation 段階で違反があれば false を返して安全に止まる設計。これは『入力エラーは想定内なので例外より戻り値で扱う方が呼び出し側のコードがきれい』という思想による。一方で『絶対に失敗してはいけない』場面 (内部処理やトランザクションの途中) では `save!` を使い、失敗時に即座に例外で気付かせる。トランザクションは例外でないとロールバックされないため、複数モデル更新では必ず ! 系を使う。",
+        example:
+          "コントローラの create アクションで `if @user.save; redirect_to @user; else; render :new; end` のように分岐し、失敗時は View で `@user.errors.full_messages` を表示。決済処理のように複数モデルを更新する Service では `ActiveRecord::Base.transaction do; payment.save!; order.update!(status: :paid); end` で原子性を保証。バックグラウンドジョブのリトライ判定でも、save! → RecordInvalid を rescue して特定のエラーだけ再スケジュールする、というパターンが多い。",
+        pitfall:
+          "トランザクション内で `save` (! なし) を使うと、validation 失敗時に false が返るだけでトランザクションはロールバックされず、半端な状態が DB に残る。必ず `save!` を使う。さらに `update_columns` / `update_all` は validation も callback も丸ごとスキップするため、業務コードで使うとデータ不整合の温床。`touch` (updated_at だけ更新) も意外と気付きにくい副作用 (関連 cache のパージなど) があるので注意。",
+      },
       codeExample:
         "u = User.new                           # 必須項目空\nu.save                                #=> false\nu.errors.full_messages                #=> [\"Name can't be blank\"]\nu.save!                               # ActiveRecord::RecordInvalid\n\n# トランザクション内では ! 系を使う\nActiveRecord::Base.transaction do\n  user.save!\n  account.save!                       # 失敗すれば両方ロールバック\nend",
+      commonMistakes: [
+        "トランザクション内で save (! なし) を使い、validation 失敗時にロールバックされない。",
+        "update_columns / update_all は validation・callback をスキップするので、データ整合性が必要な場面では使わない。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Active Record Validations — How to Trigger",
+          url: "https://guides.rubyonrails.org/active_record_validations.html#when-does-validation-happen",
+        },
+      ],
     },
   },
   {
@@ -3316,6 +3400,12 @@ export const questions: Question[] = [
       "WHERE user_id IS NULL",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。ActiveRecord は『配列 → IN 句』『where のチェーン → AND』に変換。プレースホルダ `?` で安全にバインドされる。",
+      "ActiveRecord は OR 条件を自動展開せず、`.or(...)` メソッドを使う必要がある。配列はあくまで IN 句。",
+      "BETWEEN になるのは Range (`1..3`) を渡した場合。配列 `[1, 2, 3]` は IN になる。",
+      "IS NULL は値として nil を渡した場合 (`where(user_id: nil)`)。配列の場合は IN。",
+    ],
     hints: [
       "配列を渡すと `IN` 句になります。",
       "where のチェーンは AND で連結。",
@@ -3326,8 +3416,35 @@ export const questions: Question[] = [
         "where に配列 → IN、文字列 + プレースホルダ → 安全なバインド。",
       reason:
         "ActiveRecord は条件式を SQL に変換: 配列 → IN、Range → BETWEEN、nil → IS NULL。文字列条件はプレースホルダ (`?` または `:name`) で SQL injection を防ぐ。直接文字列補間は危険。",
+      beginnerExplanation:
+        "ActiveRecord の `where` メソッドは、**Ruby の値の型を見て自動的に SQL に変換** してくれる賢い API です。\n\n**値の型と SQL 変換**:\n```ruby\nPost.where(user_id: 1)         # WHERE user_id = 1\nPost.where(user_id: [1,2,3])   # WHERE user_id IN (1,2,3)\nPost.where(user_id: 1..10)     # WHERE user_id BETWEEN 1 AND 10\nPost.where(user_id: nil)       # WHERE user_id IS NULL\nPost.where(created_at: ...3.days.ago)  # WHERE created_at < ...\n```\n\n**where のチェーン** は **AND** で連結:\n```ruby\nPost.where(user_id: 1).where('created_at > ?', 1.week.ago)\n# WHERE user_id = 1 AND created_at > '...'\n```\n\n**OR にしたい** ときは `.or` を使う (`||` ではない):\n```ruby\nPost.where(user_id: 1).or(Post.where(user_id: 2))\n# WHERE user_id = 1 OR user_id = 2\n```\n\n**🚨 SQL Injection 対策**: 文字列条件は **必ずプレースホルダ** を使う:\n```ruby\n# ✅ 安全\nPost.where('title LIKE ?', \"%#{q}%\")\nPost.where('title LIKE :q', q: \"%#{q}%\")\n\n# ❌ 危険 (ユーザー入力をそのまま埋め込み)\nPost.where(\"title = '#{user_input}'\")\n# user_input が \"'; DROP TABLE posts; --\" だったら全消し!\n```\n\nハッシュ構文 (`where(name: q)`) は内部で自動的にプレースホルダ化されるので、可能ならハッシュ構文を優先。\n\n**LIKE のワイルドカード**: ユーザー入力に含まれる `%` `_` も特別な意味を持つので `ActiveRecord::Base.sanitize_sql_like(input)` でエスケープ:\n```ruby\nq = sanitize_sql_like(params[:q])\nPost.where('title LIKE ?', \"%#{q}%\")\n```",
+      modelSelfExplanation: {
+        conclusion:
+          "結果は `WHERE user_id IN (1,2,3) AND created_at > '...'`。ActiveRecord は『配列 → IN 句』『where のチェーン → AND』『プレースホルダ ? → 安全なバインド変数』に自動変換する。",
+        reason:
+          "ActiveRecord の where は Arel と呼ばれる内部 SQL ビルダを使い、Ruby の値の型 (Integer / Array / Range / nil) を見て対応する SQL 構文に変換する。これにより開発者は SQL の構文を意識せず Ruby のデータ構造で条件を書けるが、同時に文字列直接埋め込み (`\"title = '#{q}'\"`) は SQL Injection の温床になるため、プレースホルダ (`?` 位置パラメータか `:name` 名前付き) でバインド変数化する責務がある。複雑な OR / 副問合せは ActiveRecord の `.or` / `.merge` / Arel API で書ける。",
+        example:
+          "実務では『特定ユーザの最近の投稿』を `Post.where(user_id: user_ids).where('created_at > ?', 1.week.ago)` で取得、『削除されていない投稿』を `Post.where(deleted_at: nil)`、『先月の注文』を `Order.where(created_at: previous_month_range)` のように Ruby のデータ構造で表現する。ユーザー入力の検索は必ずプレースホルダ経由で。",
+        pitfall:
+          "**SQL Injection の温床は文字列補間**: `where(\"name = '#{q}'\")` のように書くと脆弱。必ず `where('name = ?', q)` や `where(name: q)` を使う。さらに LIKE 検索では `%` `_` を `sanitize_sql_like` でエスケープしないとユーザー入力でフルスキャンを誘発できる。ActiveRecord はハッシュ構文だと自動的に安全化されるが、生 SQL を混ぜると油断しやすい。Brakeman などの静的解析ツールを CI に入れて検出するのが現実的。",
+      },
       codeExample:
         "# IN\nPost.where(user_id: [1,2,3])\n\n# BETWEEN\nPost.where(created_at: 1.week.ago..)\n\n# IS NULL\nPost.where(deleted_at: nil)\n\n# プレースホルダ\nPost.where('title LIKE ?', \"%#{q}%\")\nPost.where('title LIKE :q', q: \"%#{q}%\")\n\n# ❌ 危険 (SQL injection)\n# Post.where(\"title = '#{user_input}'\")\n\n# OR\nPost.where(user_id: 1).or(Post.where(user_id: 2))",
+      commonMistakes: [
+        "文字列補間で SQL Injection を作る。必ずプレースホルダか hash 構文。",
+        "LIKE 検索で `%` `_` をエスケープし忘れる。`sanitize_sql_like` を通す。",
+        "OR を `||` で繋ごうとする。ActiveRecord は `.or(...)` メソッドを使う。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Active Record Query — Conditions (公式)",
+          url: "https://guides.rubyonrails.org/active_record_querying.html#conditions",
+        },
+        {
+          label: "OWASP: SQL Injection Prevention Cheat Sheet",
+          url: "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+        },
+      ],
     },
   },
   {
@@ -3348,10 +3465,29 @@ export const questions: Question[] = [
         "before_validation / before_save / before_create / before_update などのコールバックがある。",
       reason:
         "ライフサイクルフックで前処理 (default 値設定、slug 生成など) を行う。複雑になりすぎたら Service Object に分離。before_destroy で関連削除制御も可。",
+      beginnerExplanation:
+        "ActiveRecord は **レコードのライフサイクル** (生成・保存・削除など) の **前後にフック** を仕込めます。これを **コールバック (callback)** と呼びます。\n\n**よく使うコールバック**:\n- `before_validation` — バリデーション直前。default 値設定、データ正規化\n- `before_save` — 保存 (INSERT/UPDATE) 直前\n- `before_create` — INSERT 直前 (新規作成時のみ)\n- `before_update` — UPDATE 直前 (更新時のみ)\n- `after_save` — 保存後 (副作用に注意)\n- `after_create` — INSERT 後 (通知メール送信など)\n- `before_destroy` — 削除直前 (削除可否の判定)\n- `after_destroy` — 削除後\n\n**典型例**:\n```ruby\nclass Post < ApplicationRecord\n  before_validation :set_slug\n  before_save       :strip_whitespace\n  after_create      :send_notification\n  before_destroy    :prevent_if_published\n\n  private\n\n  def set_slug\n    self.slug ||= title.parameterize\n  end\n\n  def strip_whitespace\n    self.title = title&.strip\n  end\n\n  def send_notification\n    NotifyJob.perform_later(self)\n  end\n\n  def prevent_if_published\n    throw :abort if published?   # 削除を中止\n  end\nend\n```\n\n**注意点 (アンチパターン)**:\n1. **コールバック地獄**: 1 つのモデルに 10 個も callback を積むと、保存時の挙動が予測不能になり、テストも困難。**Service Object** に切り出すのが現代的。\n2. **外部 API 呼び出し**: callback 内で外部 API を呼ぶと、トランザクションが長期化したり、API 失敗で保存が止まったりする。**`after_commit`** で非同期ジョブにするのが安全。\n3. **副作用の連鎖**: callback がさらに別モデルを保存し、それが callback を起動し、と連鎖するとデバッグ困難。`autosave: false` で防御。\n\n**現代的なアプローチ**: 単純なデータ正規化 (slug 生成、空白除去) は callback で OK。複雑な業務ロジックは Service Object に切り出す。Form Object (`reform` gem 等) で永続化と分離するパターンも流派の 1 つ。",
+      modelSelfExplanation: {
+        conclusion:
+          "保存前に自動実行されるコールバックは `before_save` (より厳密には `before_validation` / `before_create` / `before_update` も含む `before_*` 系)。`before_save` は INSERT / UPDATE 共通で保存直前に呼ばれる。",
+        reason:
+          "ActiveRecord は『保存・更新・削除』の各ライフサイクルに対し前後 (before/after/around) のフックを用意し、データ正規化や副作用処理を宣言的に書ける。before_validation は validation 直前、before_save は INSERT/UPDATE 直前 (validation 後、SQL 発行前)、before_create / before_update はそれぞれ新規 / 更新時のみ、と粒度が分かれており、適切なタイミングを選ぶことで責務を分離できる。これは Observer パターンの実装で、Active Record パターンの中核機能。",
+        example:
+          "ブログ記事で `before_validation :set_slug` で title から URL スラグ生成、`before_save :strip_whitespace` で前後空白除去、`after_create_commit :notify_followers` でフォロワーに非同期通知、`before_destroy :prevent_if_featured` で注目記事は削除禁止、というように使う。Devise gem は内部で `before_save` を多用してパスワードハッシュ化を行っている。",
+        pitfall:
+          "コールバックを multi-step で連鎖させると挙動が追えなくなる『コールバック地獄』のアンチパターンに陥りやすい。複雑な業務ロジックは Service Object に切り出すのが現代的。さらに `after_save` で外部 API を呼ぶとトランザクションが長期化したり、API 失敗で保存自体が rollback されたりするため、外部副作用は `after_commit` で非同期ジョブ (`*_later`) にするのが安全。テスト時にも `Post.skip_callback(:save, :before, :strip_whitespace)` のように一時オフできることを覚えておくとデバッグが楽。",
+      },
       codeExample:
         'class Post < ApplicationRecord\n  before_validation :set_slug\n  before_save       :strip_whitespace\n  after_create      :send_notification\n  before_destroy    :prevent_if_published\n\n  private\n\n  def set_slug\n    self.slug ||= title.parameterize\n  end\n\n  def strip_whitespace\n    self.title = title&.strip\n  end\n\n  def send_notification\n    NotifyJob.perform_later(self)\n  end\n\n  def prevent_if_published\n    throw :abort if published?\n  end\nend',
       commonMistakes: [
         "コールバックの乱用はテストしにくくなる。複雑な処理は Service Object などに切り出すのが現代的。",
+        "callback 内で外部 API を同期呼び出し → トランザクション長期化 / API 失敗で保存中止。after_commit + 非同期ジョブが安全。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Active Record Callbacks (公式)",
+          url: "https://guides.rubyonrails.org/active_record_callbacks.html",
+        },
       ],
     },
   },
