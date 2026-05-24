@@ -2104,8 +2104,33 @@ export const questions: Question[] = [
       summary: "モデル名 (単数 CamelCase) → テーブル名 (複数 snake_case)。",
       reason:
         "Rails の規約: モデル `User` → テーブル `users`、`BlogPost` → `blog_posts`、`Person` → `people` (不規則複数形は ActiveSupport::Inflector が処理)。手動で変えたい時は `self.table_name = \"...\"` で上書きできる。",
+      beginnerExplanation:
+        "Rails には **『規約に従えば設定不要』** という強い思想 (Convention over Configuration) があり、モデル名とテーブル名にもこのルールが効いています。\n\n基本ルール:\n- モデル名は **単数の CamelCase** (`User`, `BlogPost`)\n- テーブル名は **複数の snake_case** (`users`, `blog_posts`)\n\nRails 内部の Inflector (語形変化エンジン) が、英語の文法に従って自動変換します:\n```ruby\n'User'.tableize      # => 'users'\n'BlogPost'.tableize  # => 'blog_posts'\n'Person'.pluralize   # => 'people'   (不規則複数形も対応)\n'Mouse'.pluralize    # => 'mice'\n```\n\nつまり、`class User < ApplicationRecord` と書くだけで、自動的に `users` テーブルが対応付けられ、`User.find(1)` で `SELECT * FROM users WHERE id = 1` が発行されます。**設定ファイルは何も書きません**。これが Rails の生産性の源泉です。\n\nもし既存の DB に合わせて違うテーブル名を使いたい場合は `self.table_name = '...'` で明示的に上書きできます。レガシーシステムとの統合で頻出します。",
+      modelSelfExplanation: {
+        conclusion:
+          "テーブル名は `users`。Rails の規約として、モデル名 (単数 CamelCase) は対応するテーブル名 (複数 snake_case) に自動マッピングされる。",
+        reason:
+          "Rails の ActiveRecord はクラス名を ActiveSupport::Inflector に渡して『snake_case 化 + pluralize』することでテーブル名を導出する。これにより設定を書かずにモデルと DB が自動接続でき、開発者は本質的なコードに集中できる。Inflector は単純な s 付加だけでなく『person → people』『child → children』のような不規則複数形にも対応している。",
+        example:
+          "実務では `class Order < ApplicationRecord` と書けば自動で `orders` テーブルに接続、`class BlogPost` なら `blog_posts` に接続される。レガシー DB と統合する場合は `self.table_name = 'tbl_users'` のように上書きするが、規約に従えるなら従う方が新規参加者の学習コストが下がる。",
+        pitfall:
+          "日本語ドメイン名を直訳してモデル化すると、英語の語形変化に対応しない単語 (`Sheep` → `sheep` のように単複同形、独自の業務用語) でトラブルになる。`ActiveSupport::Inflector.inflections do |inflect| inflect.uncountable 'fish' end` のように個別ルールを追加できる。さらに `apply` → `applies`、`category` → `categories` のような y 終わりの単語も Inflector が処理するが、独自命名で `Statuses` のような複数形にせずあえて `Status` のままにすると衝突しやすい。",
+      },
       codeExample:
         '# app/models/user.rb\nclass User < ApplicationRecord\n  # 規約通りなら自動でテーブル "users" を使う\nend\n\n# 非規約のテーブル名を使う場合\nclass LegacyUser < ApplicationRecord\n  self.table_name = "legacy_user_data"\nend\n\n# Inflector で確認\n"user".pluralize       #=> "users"\n"person".pluralize     #=> "people"\n"BlogPost".tableize    #=> "blog_posts"',
+      commonMistakes: [
+        "独自の業務用語で英語複数形に対応していない単語 (Sheep / Fish 等) は Inflector に手動登録する。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Active Record Basics (公式)",
+          url: "https://guides.rubyonrails.org/active_record_basics.html#naming-conventions",
+        },
+        {
+          label: "Rails API: ActiveSupport::Inflector",
+          url: "https://api.rubyonrails.org/classes/ActiveSupport/Inflector.html",
+        },
+      ],
     },
   },
   {
@@ -2121,6 +2146,12 @@ export const questions: Question[] = [
       "Model: 設定ファイル / View: テスト / Controller: ログ",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "役割が完全に入れ替わっている。Model が HTML を描画したり、View が DB を扱ったりすることはない。",
+      "正解。Model = データとビジネスロジック、View = 表示、Controller = リクエストを受けて Model に依頼し View へ渡す仲介役。",
+      "ルーティングは MVC ではなく Rails の routes.rb の担当。Model がルーティングを持つことはない。",
+      "MVC とは無関係の役割を並べただけ。設定ファイルは config/、テストは test/、ログは log/ に置く。",
+    ],
     hints: [
       "Model はデータとそれに関するロジックを担当。",
       "View はユーザーに見せる部分。",
@@ -2131,8 +2162,30 @@ export const questions: Question[] = [
         "Model = データ/ロジック、View = 表示、Controller = 仲介役。",
       reason:
         "Rails では Skinny Controller, Fat Model が原則だが、Model が膨らみすぎる場合は Service Object, Form Object, Query Object などのパターンで分割するのが一般的。",
+      beginnerExplanation:
+        "**MVC (Model-View-Controller)** は Web アプリの設計パターンで、責務を 3 つに分けて整理する考え方です。Rails は MVC を採用した代表的なフレームワークです。\n\n各レイヤーの役割を具体例で:\n\n**Model**: データ + ロジックを扱う\n- 例: `User`, `Post` などのクラス\n- DB のテーブルと 1:1 対応 (ActiveRecord)\n- バリデーション、関連付け、ビジネスルール (例: `discount_price`, `publishable?`) を持つ\n\n**View**: 画面に出す HTML / JSON を作る\n- 例: `app/views/posts/show.html.erb`\n- `@post.title` のように Model のデータを表示するだけ\n- ロジックは最小限 (テンプレート言語で if / each ぐらい)\n\n**Controller**: リクエストを受けて Model と View をつなぐ\n- 例: `PostsController#show`\n- `params` から ID を取り出して Model に問い合わせ、結果をインスタンス変数に詰めて View に渡す\n- 自分ではビジネスロジックを持たない (持つと Fat Controller になる)\n\n**Rails の流れ**: ブラウザがリクエスト → ルーティングが該当 Controller に振り分け → Controller が Model に問い合わせ → 取得した結果を View が HTML 化して返す → ブラウザが表示。\n\n**Rails 流の慣用句**: **「Skinny Controller, Fat Model」** = コントローラは薄く、モデルに振る舞いを集める。ただし Model が肥大化したら Service Object / Form Object / Decorator などに分割します。",
+      modelSelfExplanation: {
+        conclusion:
+          "Model はデータとビジネスロジック、View は表示テンプレート、Controller は HTTP リクエストを受けて Model に依頼し View へ橋渡しする仲介役。",
+        reason:
+          "MVC は責務分離 (Separation of Concerns) の代表的なアーキテクチャパターンで、『データの扱い』『表示』『リクエスト処理』を別レイヤーに分けることで、変更の影響範囲を局所化し、再利用性とテスト容易性を高める。Rails は Convention で各レイヤーのファイル配置 (app/models, app/views, app/controllers) と命名規則を定義しており、開発者が責務の境界を意識しやすい設計になっている。",
+        example:
+          "ブログアプリで『記事を表示する』場合、URL `/posts/1` のリクエストがルーティングで `PostsController#show` に振り分けられ、コントローラが `@post = Post.find(params[:id])` で Model に問い合わせる。Model はメソッド `@post.published?` のようなビジネスルールを持つ。View `show.html.erb` は `<%= @post.title %>` のように受け取ったデータを表示する。コントローラ自体はビジネスロジックを持たない。",
+        pitfall:
+          "Controller に if 分岐や DB クエリを直書きしすぎる『Fat Controller』、View に SQL を書く、Model にビューロジックを書くなど、責務の混在が起きやすい。原則『Skinny Controller, Fat Model』を守り、Model が肥大化したら Service Object / Form Object / Query Object / Decorator (Draper / ActiveDecorator) などに分割する。View で `@user.name.present? ? @user.name : 'ゲスト'` のような条件分岐を書きたくなったら helpers / decorator に切り出す。",
+      },
       codeExample:
         '# Controller: 受け取って Model に依頼、View へ\nclass PostsController < ApplicationController\n  def show\n    @post = Post.find(params[:id])   # Model から取得\n  end                                  # View (show.html.erb) で表示\nend\n\n# Model: データ操作 + ロジック\nclass Post < ApplicationRecord\n  belongs_to :author, class_name: "User"\n  def excerpt(length = 100)\n    body.first(length)\n  end\nend\n\n# View: テンプレート\n# app/views/posts/show.html.erb\n# <h1><%= @post.title %></h1>',
+      commonMistakes: [
+        "Controller に if 分岐や生 SQL を書きすぎる『Fat Controller』。Model または Service に振り分ける。",
+        "View で `@user.posts.where(...).map { ... }` のような複雑な処理を書く。Model のメソッドや scope に切り出す。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Getting Started — MVC (公式)",
+          url: "https://guides.rubyonrails.org/getting_started.html",
+        },
+      ],
     },
   },
   {
@@ -2153,8 +2206,30 @@ export const questions: Question[] = [
         "コントローラー: クラスは `BlogPostsController`、ファイルは `blog_posts_controller.rb`。",
       reason:
         "Rails のオートロードは『定数名 ↔ ファイル名 (snake_case)』の対応を前提とする (Zeitwerk)。命名規則を守らないと autoload エラーになる。",
+      beginnerExplanation:
+        "Rails のコントローラーには **3 つの命名ルール** がそろっていて、これを守ることで設定なしに自動連携します。\n\n**1. クラス名は『モデルの複数形 + Controller』**\n```\nUser     → UsersController\nBlogPost → BlogPostsController\n```\n複数形なのは『コントローラーが扱うのはリソースの「集合」』という意味合い。Rails の RESTful 設計に基づきます。\n\n**2. ファイル名は『クラス名を snake_case にしたもの』**\n```\nUsersController     → app/controllers/users_controller.rb\nBlogPostsController → app/controllers/blog_posts_controller.rb\n```\n\n**3. 配置は `app/controllers/` 配下**\nさらにネスト (Admin::UsersController) なら `app/controllers/admin/users_controller.rb` のようにディレクトリ階層 = 名前空間。\n\nこの規約を守ると **Zeitwerk autoloader** が自動で読み込んでくれます。違反すると `NameError: expected file to define constant X` が出るので、エラーメッセージから命名のズレを発見できます。\n\nさらに `resources :blog_posts` のように routes に書くだけで、`BlogPostsController` の 7 つの標準アクション (index / show / new / create / edit / update / destroy) と対応する URL ヘルパー (`blog_posts_path`, `blog_post_path(@post)` 等) が自動生成されます。命名規則を守ることで多くの便利機能が無料で手に入ります。",
+      modelSelfExplanation: {
+        conclusion:
+          "ファイル名は `blog_posts_controller` (.rb 拡張子付きで `blog_posts_controller.rb`)。クラス名 `BlogPostsController` を snake_case に変換した形で、Rails の Zeitwerk autoloader はこの『定数名 ↔ ファイル名』対応を前提に動く。",
+        reason:
+          "Rails 6+ で標準採用された Zeitwerk autoloader は『大文字始まりの定数を見つけたらクラス名を snake_case 化して対応するファイルを探す』というシンプルなルールで動く。これにより require 文を書かずに自動で必要なクラスが読み込まれ、起動時間と開発体験が改善する。コントローラーの規約 (複数形 + Controller サフィックス) は RESTful な設計を促す Rails の意図的なガイドで、routes の `resources` と連携して 7 アクション + URL ヘルパーを自動生成する仕組みの基盤になっている。",
+        example:
+          "コマンドで `rails g controller BlogPosts index show` を実行すると、自動的に `app/controllers/blog_posts_controller.rb` が生成され、対応する view ディレクトリ `app/views/blog_posts/` と routes エントリも作られる。Admin 名前空間下なら `rails g controller Admin::Posts` で `app/controllers/admin/posts_controller.rb` (`class Admin::PostsController`) になる。",
+        pitfall:
+          "命名規則を破ると Zeitwerk が `expected file app/controllers/x.rb to define constant Y` というエラーを起動時に出す。よくあるミス: ファイル名は `users_controller.rb` なのにクラス名を `class UserController` (単数) と書いてしまう、`app/controllers/v1/users_controller.rb` を作りつつクラスを `class UsersController` (名前空間なし) としてしまう、など。エラーメッセージはかなり親切なのでそれに従えば解決できる。",
+      },
       codeExample:
         "# app/controllers/blog_posts_controller.rb\nclass BlogPostsController < ApplicationController\n  def index\n    @posts = BlogPost.recent\n  end\nend\n\n# routes\nresources :blog_posts\n\n# URL helpers\nblog_posts_path     # /blog_posts\nblog_post_path(1)   # /blog_posts/1",
+      commonMistakes: [
+        "ファイル名は複数形 (`blog_posts_controller.rb`) なのにクラスを単数形 (`BlogPostController`) と書く。Zeitwerk エラーになる。",
+        "名前空間 (Admin::) を使うときディレクトリを掘り忘れる。`Admin::UsersController` なら `app/controllers/admin/users_controller.rb`。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Autoloading and Reloading Constants (公式)",
+          url: "https://guides.rubyonrails.org/autoloading_and_reloading_constants.html",
+        },
+      ],
     },
   },
   {
@@ -2171,6 +2246,12 @@ export const questions: Question[] = [
       "コンフィグはすべて手動で書くべき",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "Rails の思想と正反対。設定ファイルを最小化するために規約を導入している。",
+      "正解。Convention over Configuration =『設定より規約』、つまり標準的な命名・配置のルールに従う限り設定不要で動く思想。",
+      "『配置を重視』ではなく『規約 (Convention) を優先』。配置も規約の一部だが、それだけが本質ではない。",
+      "CoC は逆で、手動設定を最小化する思想。手動でなんでも書くのは Configuration over Convention の世界 (Java EE 等の旧来のスタイル)。",
+    ],
     hints: [
       "DHH の Rails 設計哲学。",
       "命名規則やディレクトリ構成に従えば、ほぼ設定ゼロで動く。",
@@ -2181,8 +2262,33 @@ export const questions: Question[] = [
         "規約に従えば設定不要になる、Rails の中心思想。",
       reason:
         "テーブル名、ファイル名、クラス名、ルーティングなどに規約があり、それに従う限り設定ファイルを書かなくて良い。これが Rails の生産性の源泉。一方で『規約から外れる』時に逆に大変になる側面もある。",
+      beginnerExplanation:
+        "**Convention over Configuration (CoC)** = **「設定より規約」** は、Rails の生みの親 DHH が掲げた中心思想です。\n\n**従来のフレームワーク**: 何かを動かすには大量の設定ファイルが必要 (XML, properties など)。例えば Java の Hibernate では、エンティティクラスとテーブル名の対応を XML で 1 つずつ宣言していた。\n\n**Rails の思想**: 標準的な命名や配置のルールを決めておき、それに従う限り設定はゼロでいい。例えば:\n- `class User < ApplicationRecord` と書けば自動で `users` テーブルに接続\n- `app/controllers/users_controller.rb` に置けば自動でロード\n- `resources :users` と書けば 7 アクション + URL ヘルパーが自動生成\n\nこれにより **本質的なコードに集中** でき、ボイラープレートが激減します。Rails の生産性の源泉です。\n\n**トレードオフ**: 規約から外れた瞬間に逆にハマりやすくなる。レガシー DB との統合で `table_name = 'tbl_users'` を書かないといけない、独自のディレクトリ構造を使うと autoload が効かない、など。**できる限り規約に従う** のが Rails アプリの暗黙の合意です。\n\n類似思想: **DRY (Don't Repeat Yourself)** = 同じ情報を 2 か所に書かない。CoC と組み合わせて『1 か所に書いて全自動で連動』というスタイルを生み出しています。",
+      modelSelfExplanation: {
+        conclusion:
+          "Convention over Configuration (CoC) =『規約に従えば設定が不要になる』Rails の中心思想。命名・配置・関連付けに標準ルールを定め、それに従う限りボイラープレート設定ゼロでアプリが動く。",
+        reason:
+          "従来のフレームワークが XML や YAML で何百行もの設定を要求していたのに対し、Rails は『標準的な書き方をすればフレームワーク側がよしなに推論する』という設計を選んだ。これにより 90% の標準的なケースを設定なしで処理でき、開発者は本質的なドメインロジックに集中できる。一方で 10% の特殊ケース (レガシー DB、独自規約) では明示的に上書きする必要があり、規約を破ると逆に学習コストが上がる、というトレードオフを抱えている。",
+        example:
+          "新規 Rails アプリを `rails new` で作って `rails g scaffold Post title:string body:text` を実行すると、Model / Controller / View / Migration / Test / Routes が一括生成されて、すぐ動く CRUD が手に入る。これはすべて CoC のおかげで設定ファイルを書く必要がない。逆にレガシーシステム連携で `self.table_name = 'tbl_user_data'`、`self.primary_key = 'user_no'` のように規約から外れると、追加コードが増え、新規参加者が戸惑うコストも増える。",
+        pitfall:
+          "Rails は『規約を知っていることが前提』のフレームワークなので、初学者は『なぜこれで動くのか』が見えにくく、ブラックボックスに感じやすい。規約を理解しないまま規約外のことを始めるとデバッグが極端に難しくなる。逆に、規約に従ってさえいれば多くのことが自動で繋がるので、最初の数ヶ月は『規約を知る』ことに投資するのが結果的に最速。",
+      },
       codeExample:
         "# 規約に従う\nclass User < ApplicationRecord; end\n# → テーブル: users, 主キー: id, 自動で動く\n\n# 規約から外れる\nclass LegacyUser < ApplicationRecord\n  self.table_name        = \"tbl_users\"\n  self.primary_key       = \"user_no\"\n  self.inheritance_column = \"type_code\"\nend",
+      commonMistakes: [
+        "規約を知らずに『なぜ動いているのか分からない』状態でカスタマイズを始めると、デバッグが極端に難しい。先に Rails Guides を一通り読むのが最速。",
+      ],
+      references: [
+        {
+          label: "Rails Doctrine (DHH による公式エッセイ)",
+          url: "https://rubyonrails.org/doctrine",
+        },
+        {
+          label: "Rails Guides: Getting Started",
+          url: "https://guides.rubyonrails.org/getting_started.html",
+        },
+      ],
     },
   },
   {
@@ -2199,6 +2305,12 @@ export const questions: Question[] = [
       "ルーティングの設定",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "DB 接続の設定は `config/database.yml`。helpers にはコードのモジュールが入る。",
+      "正解。`app/helpers/` は View テンプレート (ERB) で呼び出す補助メソッドを置く場所。`number_with_delimiter` や独自の `format_price` などをここに切り出す。",
+      "Fixture (テストデータ) は `test/fixtures/` または `spec/fixtures/`。helpers とは別物。",
+      "ルーティングは `config/routes.rb`。helpers ディレクトリには配置しない。",
+    ],
     hints: [
       "View テンプレート (ERB) から呼び出すメソッド。",
       "リンク生成や日付フォーマットなど。",
@@ -2209,8 +2321,30 @@ export const questions: Question[] = [
         "helpers は View で使うユーティリティメソッド (link_to, number_with_delimiter など) の置き場。",
       reason:
         "ERB 内でロジックが膨らんだら helpers に切り出す。コントローラ毎に自動ロードされ、グローバルに使えるようになる (config.action_controller.include_all_helpers = true デフォルト)。",
+      beginnerExplanation:
+        "**`app/helpers/`** は **View で使う『補助メソッド (helper)』** を置くディレクトリです。\n\nERB テンプレート内で `<%= ... %>` の中に複雑なロジックを書くと読みにくくなります。例えばこんなコードは避けたい:\n```erb\n<%= '¥' + product.price.to_s.reverse.scan(/.{1,3}/).join(',').reverse %>\n```\n\n代わりに helpers に切り出して、View からはシンプルに呼ぶ:\n```ruby\n# app/helpers/application_helper.rb\nmodule ApplicationHelper\n  def format_price(yen)\n    \"¥#{number_with_delimiter(yen)}\"\n  end\nend\n```\n```erb\n<%= format_price(@product.price) %>  <%# => ¥1,200 %>\n```\n\nRails 標準でもよく使う helper がたくさん用意されています:\n- `link_to('詳細', post_path(@post))` — `<a>` タグ生成\n- `number_with_delimiter(1234567)` — `1,234,567`\n- `time_ago_in_words(post.created_at)` — `3 minutes ago`\n- `truncate(text, length: 100)` — 長文の省略\n- `image_tag('logo.png')` — `<img>` タグ生成\n\n**配置**: `app/helpers/application_helper.rb` (全 View 共通) または `app/helpers/posts_helper.rb` (PostsController の View 用)。デフォルトでは `config.action_controller.include_all_helpers = true` なのですべての helper がすべての View で使える。\n\n**最近の Rails 流派**: helpers が肥大化したら **ViewComponent** や **Decorator (Draper)** で表示ロジックをオブジェクト化する設計が好まれることもあります。",
+      modelSelfExplanation: {
+        conclusion:
+          "`app/helpers/` は View で使う補助メソッド (helper) を置くディレクトリ。`link_to` や日付フォーマット、独自の表示ロジックなどをモジュールにまとめて View から呼び出せるようにする。",
+        reason:
+          "View 内の ERB テンプレートに複雑なロジックを直接書くと、HTML と Ruby が混在して可読性が低下する。helper はこの表示ロジックを Ruby のメソッドとして抜き出し、テスト可能・再利用可能にする仕組み。Rails 標準で `link_to` / `number_with_delimiter` / `truncate` などが提供され、独自のものも `app/helpers/` 配下にモジュールとして配置すれば全 View から使える。Rails は『View はテンプレート、ロジックは helper / model』という分業を推奨しており、その境界を明示する場所として helpers が位置付けられている。",
+        example:
+          "実務では金額表示 `format_price`、日付の和暦表示 `japanese_date(date)`、ステータスの色付き表示 `status_label(post)`、SNS 共有ボタン生成 `tweet_button(text)`、ユーザーアイコン表示 `user_avatar(user, size: 40)` など、表示に関わる小さなロジックを集約する。複数の View で同じ表示が必要な場面で特に威力を発揮する。",
+        pitfall:
+          "helper にビジネスロジック (例: 価格計算、税率判定) を書いてしまうと、Model から呼べず再利用性が低下する。helper はあくまで『表示のための整形』に限定し、ビジネスロジックは Model / Service に置く。さらに helper が大量に増えるとグローバル名前空間が汚染されてメソッド名衝突が起きるので、肥大化したら ViewComponent / Decorator (Draper, ActiveDecorator) でクラス化するのが現代的なアプローチ。",
+      },
       codeExample:
         '# app/helpers/application_helper.rb\nmodule ApplicationHelper\n  def format_price(yen)\n    "¥#{number_with_delimiter(yen)}"\n  end\nend\n\n# View で\n<%= format_price(@product.price) %>\n# => ¥1,200\n\n# Rails 標準の便利 helper\n<%= link_to "詳細", post_path(@post) %>\n<%= time_ago_in_words(@post.created_at) %>',
+      commonMistakes: [
+        "helper にビジネスロジック (例: 税計算) を書く。Model に置いて Model.tax(...) を helper / View から呼ぶ。",
+        "helper が肥大化したら ViewComponent / Decorator でクラス化する。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Action View Helpers (公式)",
+          url: "https://guides.rubyonrails.org/action_view_helpers.html",
+        },
+      ],
     },
   },
   {
