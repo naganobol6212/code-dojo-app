@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-j",
+    date: "2026-05-24",
+    title: "🎉 Ruby 基礎 30 問すべての解説拡充が完了 (Phase 6)",
+    badge: "content",
+    highlights: [
+      "rb-026 (ENV) / rb-027 (rescue スコープ) / rb-028 (StandardError) / rb-029 (文字列スライス) / rb-030 (times)",
+      "ruby-basics カテゴリの 30 問すべてに『噛み砕き / 自己説明 4 構造 / 選択肢解説 / 公式リンク』が揃いました",
+      "次は別カテゴリ (rails-convention や active-record など) のコンテンツ拡充に着手予定",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-i",
     date: "2026-05-24",
     title: "Ruby 基礎 rb-021〜025 の解説拡充 (Phase 5)",

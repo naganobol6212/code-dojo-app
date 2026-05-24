@@ -3890,6 +3890,12 @@ export const questions: Question[] = [
       "Environment.get('PATH')",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。ENV は『Hash のような特殊オブジェクト』で、文字列キーを `[]` で渡してアクセスする。シンボルキーは不可。",
+      "ENV はメソッドベースの API を持たない。`.PATH` のような構文では取れない。",
+      "`$ENV` という特殊変数は Ruby に存在しない。グローバル変数は `$」で始まるが、環境変数は ENV が担当する。",
+      "Environment クラスや `.get` メソッドは Ruby 標準にない。Java の `System.getenv` の感覚で書くとハマる。",
+    ],
     hints: [
       "`ENV` は擬似 Hash オブジェクト。",
       "`[]` でアクセスする。",
@@ -3900,8 +3906,34 @@ export const questions: Question[] = [
         "`ENV` は環境変数を扱う特殊な Hash 様オブジェクト。`ENV['KEY']` でアクセス。",
       reason:
         "`ENV[key]` で取得 (無ければ nil)、`ENV[key] = val` で設定、`ENV.fetch(key)` で必須化、`ENV.to_h` で Hash 化。`.env` ファイルで管理するなら dotenv gem を使うのが定番。",
+      beginnerExplanation:
+        "Ruby で OS の環境変数 (`PATH`, `HOME`, `DATABASE_URL` など) にアクセスするには **`ENV`** という特殊なグローバル定数を使います。\n\n`ENV` は **Hash のように振る舞うオブジェクト** で、文字列キーで `[]` アクセスします:\n```ruby\nENV['PATH']         # 取得 (見つからなければ nil)\nENV['NEW_VAR'] = 'x'  # 設定 (現在プロセスのみ有効)\n```\n\n**重要な使い分け**:\n- `ENV['KEY']` → 無ければ nil (静かに失敗)\n- `ENV.fetch('KEY')` → 無ければ KeyError 例外 (必須項目に推奨)\n- `ENV.fetch('KEY', 'default')` → 無ければデフォルト値\n\n本番環境で必須の環境変数は **`fetch` を使う** のが安全です。`ENV['DATABASE_URL']` が nil のままアプリが起動すると、後で謎のエラーで落ちて原因究明が大変だからです。\n\n**Rails アプリでは secrets / credentials の方が推奨** されます。Rails 5.2+ の `Rails.application.credentials` は暗号化済みファイルで秘密情報を管理でき、API キーやパスワードを安全にバージョン管理できます。環境変数はそれが使えないコンテナ環境などの本番設定で使う、というのが現代的な棲み分けです。",
+      modelSelfExplanation: {
+        conclusion:
+          "正解は `ENV['PATH']`。ENV は Ruby が用意した Hash 様オブジェクトで、文字列キーを `[]` で渡して環境変数を読み書きする。",
+        reason:
+          "ENV は『プロセス起動時の環境変数をラップした擬似 Hash』で、`[]` / `[]=` / `each` / `to_h` などの Hash 風 API を提供する。シンボルキーや method-style アクセス (`ENV.PATH`) はサポートされず、必ず String キーで `[]` を使う。これは ENV が OS の環境変数ストア (C 文字列) を直接バックエンドにしているための制約。",
+        example:
+          "実務では DB 接続文字列を `DATABASE_URL = ENV.fetch('DATABASE_URL')`、Redis URL を `ENV.fetch('REDIS_URL', 'redis://localhost:6379/0')`、外部 API キーを `Stripe.api_key = ENV.fetch('STRIPE_SECRET_KEY')` のように受け取る。dotenv gem を使うと `.env` ファイルを開発環境で読み込めて、本番では実環境変数が使われるという定石。",
+        pitfall:
+          "`ENV['KEY']` は無いと nil を返すので、後で NoMethodError が出るまで気付かない。本番で必須の値は `ENV.fetch('KEY')` で起動時に明示的にコケるようにする。さらに ENV にシークレットを入れて Slack やログに `inspect` してしまうリークも頻発するので、Rails credentials などの暗号化された格納先を併用するのが現代的。",
+      },
       codeExample:
         'ENV["PATH"]                 # 取得 (nil 可)\nENV.fetch("DATABASE_URL")   # 無ければ例外\nENV.fetch("RAILS_ENV", "development")  # デフォルト指定\n\n# 全環境変数\nENV.to_h\n\n# 設定 (現在プロセスのみ)\nENV["FOO"] = "bar"\n\n# Rails の credentials を使う方がベター\nRails.application.credentials.aws[:key]',
+      commonMistakes: [
+        "`ENV['KEY']` で nil を許すと後で謎の NoMethodError になる。必須は `ENV.fetch('KEY')`。",
+        "ENV はシンボルキー (`:PATH`) では引けない。必ず文字列キーで。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: ENV",
+          url: "https://docs.ruby-lang.org/ja/latest/class/ENV.html",
+        },
+        {
+          label: "Rails Guides: Configuring credentials (公式 Rails)",
+          url: "https://guides.rubyonrails.org/security.html#environmental-security",
+        },
+      ],
     },
   },
   {
@@ -3918,6 +3950,12 @@ export const questions: Question[] = [
       "何も出力されない",
     ],
     answerIndex: 2,
+    choiceExplanations: [
+      "rescue ブロック内で再 raise した例外は、同じ begin に並んでいる別の rescue 句では拾われない。同じ begin の rescue 句は『begin 本体で出た例外』だけが対象。",
+      "first は最初の rescue で受け取られ、その中で別の例外を raise しているので first が puts されることはない。",
+      "正解。最初の rescue 句内で `raise ArgumentError` が出るが、同じ begin の 2 つ目の rescue では拾えず外側に伝播する。begin の外に補捉する仕組みが無ければ未捕捉のまま終了する。",
+      "ArgumentError が外側に伝播するので、何も出力されないのではなく『未捕捉例外』としてプログラムが落ちる。",
+    ],
     hints: [
       "rescue 句は上から順に評価される。",
       "最初の rescue で StandardError を捕捉、その中で再 raise。",
@@ -3928,8 +3966,30 @@ export const questions: Question[] = [
         "rescue 句内で発生/再 raise された例外は、同じ begin の他の rescue では捕捉されず外側に伝播する。",
       reason:
         "begin/rescue は『rescue で捕まえる対象は begin 本体のみ』。rescue 句の中で再 raise すると、そのまま外に飛ぶ (同じ begin の他の rescue には行かない)。第2のArgumentError → 未捕捉のまま外へ。",
+      beginnerExplanation:
+        "Ruby の `begin / rescue` の **スコープルール** を理解しているか問う問題です。\n\n大事なのは: **rescue 句がカバーするのは「begin 本体」だけ。同じ begin に並んでいる別の rescue 句の中で出た例外は、その rescue 自身では拾えない**。\n\nコードの流れを追いましょう。\n\n1. `begin` 本体で `raise StandardError, 'first'` が出る。\n2. 1 つ目の `rescue => e` がこれを捕まえる (引数省略 = StandardError をデフォルトで捕捉)。\n3. その rescue 句の中で `raise ArgumentError, 'second'` を新たに発生させる。\n4. **ここで Ruby は『同じ begin の別の rescue 句にも見せる』とはしない**。rescue 内で出た例外はそのまま **外側に伝播** する。\n5. 外側に他の begin/rescue が無いので、プログラムは **未捕捉例外** で落ちる。\n\nこの設計の理由は『無限ループ回避』。rescue で出た例外を同じ begin で延々と捕まえ続けるとデバッグ困難なループになるので、Ruby は『rescue は begin 本体専用』というシンプルなルールに統一しています。\n\n**もし 2 段階で捕まえたい場合** は、内側にもう 1 つ begin/rescue を作って入れ子にします:\n```ruby\nbegin\n  begin\n    raise 'first'\n  rescue => e\n    raise ArgumentError, 'second'\n  end\nrescue ArgumentError => e\n  puts \"caught: #{e.message}\"\nend\n```\nこれなら 'caught: second' が出力されます。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は無く ArgumentError が未捕捉のまま外へ伝播する。rescue 句の中で raise した例外は、同じ begin に並ぶ他の rescue 句では拾えず、外側に抜けていく仕様だから。",
+        reason:
+          "Ruby の begin/rescue のスコープは『rescue が捕捉する対象は begin 本体だけ』というシンプルなルール。rescue 句自体は『例外処理のためのコード』であって、そこで新たに raise された例外は同じ begin の別の rescue にも else にも届かない。これにより rescue 句が連鎖的に発火する難読化を避け、例外伝播の流れを直感的に保っている。2 段階で捕まえたければ begin を入れ子にするのが正しい書き方。",
+        example:
+          "例外をラップして再 raise する Rails のサービスオブジェクトで頻出: 内側で `rescue ActiveRecord::RecordNotFound => e; raise NotFoundError.new('user gone', cause: e); end` のように包んで上に渡し、外側のコントローラの begin/rescue で捕まえる、というレイヤード設計。raise した例外には `cause` (元の例外) が自動でぶら下がり、ログには両方が出る。",
+        pitfall:
+          "rescue 内での raise が同じ begin の他の rescue で捕まえられると勘違いすると、例外が握りつぶされたり想定外の例外型が外に飛んでサービス全体を巻き込む。さらに `rescue Exception` (StandardError ではなく Exception を捕捉) のような乱用は SignalException や SystemExit まで吸ってしまい、Ctrl-C で止められないバグの原因。原則『StandardError とそのサブクラス』だけを rescue する。",
+      },
       codeExample:
         'begin\n  begin\n    raise "first"\n  rescue => e\n    raise ArgumentError, "second"\n  end\nrescue ArgumentError => e\n  puts "caught: #{e.message}"   # caught: second\nend\n\n# 例外チェーンを保持\nbegin\n  raise OriginalError\nrescue => e\n  raise NewError, "wrapped"     # e が e.cause として保持される\nend',
+      commonMistakes: [
+        "同じ begin の rescue 連鎖で捕まえられると思い込んでバグの温床に。2 段階補捉が必要なら begin を入れ子にする。",
+        "`rescue Exception` は SignalException や SystemExit まで捕まえてしまう。原則 `StandardError` 系のみに限定する。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: 例外処理 (begin/rescue)",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fcontrol.html#begin",
+        },
+      ],
     },
   },
   {
@@ -3950,8 +4010,34 @@ export const questions: Question[] = [
         "rescue のデフォルト捕捉対象は StandardError。Exception を直接 rescue するのは厳禁。",
       reason:
         "Exception の直下には SystemExit (exit時)、Interrupt (Ctrl-C)、NoMemoryError、SignalException など『プログラム制御に関わる重要例外』が含まれる。これらを rescue するとアプリが落ちないバグを生む。アプリ用のカスタム例外も `< StandardError` で定義する。",
+      beginnerExplanation:
+        "Ruby の例外クラスは木構造になっています。トップに `Exception` があり、その下に色々な例外が並びます。\n\n```\nException\n├── SystemExit         (exit 時)\n├── SignalException    (シグナル)\n│    └── Interrupt     (Ctrl-C)\n├── NoMemoryError\n├── ScriptError        (文法エラー系)\n└── StandardError      ← ★ アプリで扱う共通の親\n     ├── RuntimeError  (raise 'msg' のデフォルト)\n     ├── ArgumentError\n     ├── TypeError\n     ├── ZeroDivisionError\n     └── ...\n```\n\n**重要なルール**: アプリのコードで `rescue` するときは **必ず `StandardError` 以下** を対象にする。`Exception` を直接 rescue してはいけない。\n\nなぜなら `Exception` 直下にある `SystemExit` (`exit` 呼び出し)、`SignalException` (`Ctrl-C`)、`NoMemoryError` などは『プログラムの制御に関わる特別な例外』で、アプリが勝手に握りつぶしてはいけないものだから。`rescue Exception` を書くと Ctrl-C でアプリが止まらなくなって、運用上の悪夢になります。\n\n```ruby\n# 良い例\nrescue => e          # = rescue StandardError => e (デフォルト)\nrescue StandardError => e\nrescue ArgumentError => e\n\n# ダメな例\nrescue Exception => e  # ← Ctrl-C や exit も握りつぶす!\n```\n\n**自作の例外クラス** も必ず `< StandardError` で定義します:\n```ruby\nclass MyAppError < StandardError; end\nclass InvalidInputError < MyAppError; end\n```\n\nこうしておけば、`rescue MyAppError => e` でアプリ固有の例外群をひとまとめに捕まえられて、他のシステム例外と混同しません。",
+      modelSelfExplanation: {
+        conclusion:
+          "推奨される共通親は `StandardError`。Ruby の例外階層では Exception の直下にあり、`rescue` 句の引数省略時のデフォルト捕捉対象でもある。",
+        reason:
+          "Exception の直下には SystemExit / Interrupt (Ctrl-C) / NoMemoryError / SignalException など『プログラム制御に関わるシステム例外』が並んでおり、これらを安易に rescue するとアプリが止まらない・終了処理が走らないといった重大なバグになる。StandardError はこうした制御系例外を除いた『アプリで起こりうる通常のエラー』をまとめる中継クラスとして用意されており、ユーザコードで捕捉すべき正しいレベル。さらに `rescue` の引数を省略するとデフォルトで StandardError が指定された扱いになるので、安全側に倒れる設計。",
+        example:
+          "Rails のサービス層で独自の業務例外を作るとき `class PaymentFailedError < StandardError; end`、`class InvalidStateError < StandardError; end` のように StandardError を継承する。コントローラやジョブで `rescue_from PaymentFailedError, with: :handle_payment_failure` のような捕捉を書ける。逆に rake タスクで `begin ... rescue Exception => e` と書いてしまうと、Ctrl-C で止められないジョブが量産される。",
+        pitfall:
+          "ライブラリの中にはあえて Exception を直接継承する例外もある (例: Sidekiq の `Sidekiq::Shutdown` は SignalException 系)。これらは『アプリで rescue してはいけない』というシグナルなので、`rescue StandardError` に絞ることで自然に除外できる。さらに自作例外を Exception 直下に置くと利用者が StandardError 捕捉から漏らしてしまうので、必ず StandardError 系に置く。",
+      },
       codeExample:
         "# 良い例\nclass MyError < StandardError; end\n\n# rescue StandardError (引数省略時のデフォルト)\nbegin\n  ...\nrescue => e          # = rescue StandardError => e\n  log(e)\nend\n\n# ダメな例 (Ctrl-C も捕まえてしまう)\nbegin\n  ...\nrescue Exception => e    # NG\nend",
+      commonMistakes: [
+        "`rescue Exception` は SystemExit / Interrupt / NoMemoryError まで捕まえる。原則 StandardError 以下のみ。",
+        "自作例外を Exception 直下に置くと利用者が StandardError 捕捉から漏らす。必ず StandardError 系に。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Exception クラス階層",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Exception.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: StandardError",
+          url: "https://docs.ruby-lang.org/ja/latest/class/StandardError.html",
+        },
+      ],
     },
   },
   {
@@ -3968,6 +4054,12 @@ export const questions: Question[] = [
       "hel / hello / ell",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。[0..2] が index 0〜2 で 'hel'、[-3..] が末尾から 3 文字 'llo'、[1,3] が index 1 から 3 文字 'ell'。",
+      "3 つ目は (start, length) の形なので、index 1 から 3 文字 = 'ell' になる。'llo' は -3 から 3 文字の場合。",
+      "1 つ目は Range なので index 0〜2、つまり 'hel'。'ell' は 1 始まりで 3 文字を指定したときの結果。",
+      "2 つ目 `[-3..]` は『-3 から末尾まで』の Range なので 'llo' の 3 文字。'hello' 全体にはならない。",
+    ],
     hints: [
       "`str[range]` で部分文字列。",
       "`str[start, length]` で開始位置 + 長さ。",
@@ -3978,8 +4070,30 @@ export const questions: Question[] = [
         "String のスライス: [start..end] / [start..]/ [start, length] / [-n..]。",
       reason:
         "Ruby の文字列スライスは Range と (start, length) の両方をサポート。`[-3..]` は末尾から 3 文字 (... の終了側省略で末尾まで)。`[1, 3]` は index 1 から 3 文字。",
+      beginnerExplanation:
+        "Ruby の文字列スライス (部分取得) には **3 つの書き方** があります。一度覚えると一気に表現力が上がります。\n\n**1. Range で範囲指定** `s[start..end]`\n`'hello'[0..2]` → index 0, 1, 2 = `'hel'`。`..` は両端を含む、`...` は終端を除く (`0...3` も 'hel')。\n\n**2. 開始位置 + 長さ** `s[start, length]`\n`'hello'[1, 3]` → index 1 から 3 文字 = `'ell'`。Range より直感的に書ける場面が多い。\n\n**3. 負のインデックス** で末尾から数える\n`'hello'[-3..]` → 末尾から 3 番目 (index 2 の 'l') から最後まで = `'llo'`。Ruby 2.6+ で導入された **endless range** (`-3..`) を使うと『末尾まで』を簡潔に書ける。\n\n他にも:\n- `s[10]` → nil (範囲外でもエラーにならない)\n- `s[/l+/]` → 正規表現マッチした部分 'll'\n- `s[/(\\w)\\w/, 1]` → 正規表現の第 1 キャプチャ 'h'\n- `s[0]` → 1 文字 'h' (Ruby 1.9+ では文字、それ以前は文字コード)\n\nRange と (start, length) の使い分けは『開始と終了が分かっているか、開始と長さが分かっているか』で選びます。配列スライスもほぼ同じ仕様 (`arr[0..2]`, `arr[1, 3]`) なので、文字列も配列も同じ感覚で扱えます。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は `hel / llo / ell`。Ruby の String#[] は Range・開始位置+長さ・負のインデックスなど複数の指定方法を持ち、それぞれ違う部分を返す。",
+        reason:
+          "Ruby の String#[] は柔軟な多態 API で、引数の種類に応じて挙動を切り替える: Integer 1 つなら 1 文字、Range なら範囲、Integer 2 つなら (開始, 長さ)、Regexp ならマッチした部分、Regexp + Integer ならキャプチャグループ。負のインデックスは末尾を起点とし、endless range (`-3..`) は『そこから末尾まで』を意味する。これにより 1 つのメソッドで多様な切り出しパターンを表現でき、Array#[] とも仕様が揃っているため学習コストが低い。",
+        example:
+          "実務では文字列の頭 N 文字でログを省略 (`message[0, 100]`)、末尾のファイル拡張子取得 (`filename[/\\.\\w+\\z/]`)、URL のパス部分抽出、ハッシュタグやメンションのトリミングなどで多用される。Rails の view ヘルパー `truncate` も内部的にはこうしたスライスを使う。",
+        pitfall:
+          "範囲外を Range で指定すると nil ではなく『可能な範囲だけ』を返す挙動が直感に反することがある (`'abc'[1..10]` → 'bc')。さらに『1 文字取得』と『1 要素配列取得』の違いに注意: `'abc'[0]` は 'a' (文字) だが、Ruby 1.8 以前は ASCII コード 97 が返る古い挙動があった (現在は廃止)。マルチバイト文字を扱う場面では byte 単位 vs 文字単位の混同 (byteslice vs []) にも注意。",
+      },
       codeExample:
         's = "hello"\ns[0..2]       #=> "hel"\ns[0..]        #=> "hello"\ns[-3..]       #=> "llo"\ns[1, 3]       #=> "ell"\ns[10]         #=> nil  (範囲外)\ns[/l+/]       #=> "ll" (正規表現マッチ)\ns[/(\\w)\\w/, 1] #=> "h" (キャプチャ)',
+      commonMistakes: [
+        "Range で範囲外を指定すると nil ではなく『可能な部分のみ』が返る。`'abc'[1..10]` → 'bc'。",
+        "マルチバイト文字列で byte 単位の操作が必要なら `byteslice` を使う。`[]` は文字単位。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: String#[] (slice)",
+          url: "https://docs.ruby-lang.org/ja/latest/method/String/i/=5b=5d.html",
+        },
+      ],
     },
   },
   {
@@ -3992,6 +4106,12 @@ export const questions: Question[] = [
     code: "5.times { |i| puts i }",
     choices: ["0,1,2,3,4 の 5 回", "1,2,3,4,5 の 5 回", "0,1,2,3,4,5 の 6 回", "実行されない"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`n.times` は 0 から n-1 までの整数を順にブロック変数に渡す。配列インデックスと同じ 0 始まり。",
+      "1 始まりにしたいなら `1.upto(5)` を使う。`5.times` は 0 始まりで n 回。",
+      "6 回ではない。5.times は『n 回』なのできっちり 5 回。0..4 で 5 つ。",
+      "5 は 0 より大きいのでブロックは実行される。0 や負数のときに限り 0 回 (実行されない)。",
+    ],
     hints: [
       "`n.times` は n 回繰り返す。",
       "ブロック変数は 0 から n-1 まで。",
@@ -4002,8 +4122,34 @@ export const questions: Question[] = [
         "`n.times { |i| ... }` は 0..n-1 を i に渡してブロックを n 回実行。",
       reason:
         "Integer の繰り返しイディオム。`upto` `downto` `step` も類似。Ruby らしいコンパクトな書き方。",
+      beginnerExplanation:
+        "`n.times` は **「n 回繰り返す」** の最短表記です。Ruby らしい『数値自身がメソッドを持つ』設計が表れた典型例です。\n\n```ruby\n5.times { |i| puts i }\n# 0\n# 1\n# 2\n# 3\n# 4\n```\n\nブロック変数 `i` には 0, 1, 2, ... と **0 始まりで n-1 まで** が順に入ります。配列のインデックスと同じ感覚で、ループカウンタを別途用意しなくて済みます。\n\n**仲間のメソッド** (Integer の繰り返しイディオム):\n- `n.times` → 0 から n-1 (n 回)\n- `m.upto(n)` → m から n (n - m + 1 回)\n- `m.downto(n)` → m から n まで降順\n- `m.step(n, step)` → m から n まで step 刻み\n\n```ruby\n3.times { |i| puts i }       # 0, 1, 2\n1.upto(3) { |i| puts i }     # 1, 2, 3\n3.downto(1) { |i| puts i }   # 3, 2, 1\n1.step(10, 2) { |i| puts i } # 1, 3, 5, 7, 9\n```\n\n他の言語の `for i in 0..n-1` や `while` で書きがちなループを 1 行で表現できるのが Ruby らしいところ。さらに `Array.new(n) { |i| ... }` も同じパターンで、n 要素の配列を初期化できます: `Array.new(3) { |i| i * 2 }` → `[0, 2, 4]`。\n\n**回数自体が要らない繰り返し** (副作用だけ) なら `5.times { do_something }` のようにブロック変数を省略します。",
+      modelSelfExplanation: {
+        conclusion:
+          "`5.times { |i| puts i }` は 0, 1, 2, 3, 4 の 5 回ブロックを実行する。`n.times` は 0 から n-1 までの整数を順にブロック変数に渡す Integer の繰り返しメソッド。",
+        reason:
+          "Ruby は『数値もオブジェクト』という設計で、Integer 自体にループ系メソッド (times / upto / downto / step) を持たせている。`times` は内部的に 0 から n-1 まで Enumerator として列挙する仕組みで、ブロックを渡せばその回数だけ実行し、ブロックを省略すれば Enumerator が返るので map / each_with_index と組み合わせた関数的な書き方もできる。0 始まりなのは配列インデックスと整合性を取るためで、Ruby の他のイテレータ (each_with_index など) とも歩調を揃えている。",
+        example:
+          "リトライ処理 `3.times { try || break }`、テストデータ生成 `Array.new(5) { |i| User.new(name: \"u#{i}\") }`、画面の空行出力 `n.times { puts }`、進捗バーの単純カウントアップなど、ループ回数が事前に分かっている場面で頻出。Rails では `5.times { Post.create!(title: 'sample') }` のように seed データ作成にもよく使う。",
+        pitfall:
+          "0 以下を渡すとブロックは実行されない (`0.times { puts 1 }` は何も出ない、`-3.times` も同様)。1 始まりの繰り返しをしたい場面で `(1..n).each` と書く方が読みやすい場合もある。逆に『回数を後で変える可能性がある』『コレクションが既にある』なら `array.each` で十分なので times に固執しない。",
+      },
       codeExample:
         '3.times { |i| puts i }       # 0, 1, 2\n1.upto(3) { |i| puts i }     # 1, 2, 3\n3.downto(1) { |i| puts i }   # 3, 2, 1\n1.step(10, 2) { |i| puts i } # 1, 3, 5, 7, 9\n\n# Array.new も times パターン\nArray.new(3) { |i| i * 2 }   #=> [0, 2, 4]',
+      commonMistakes: [
+        "0 以下を渡すとブロックは実行されない。負数で謎の挙動になるなら値の事前チェックを忘れない。",
+        "1 始まりが欲しいなら `1.upto(n)` か `(1..n).each` を使う。`(0...n).each { |i| ... i + 1 }` のように調整して書くと読みにくい。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Integer#times",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Integer/i/times.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Integer#upto / #downto / #step",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Integer.html",
+        },
+      ],
     },
   },
 
