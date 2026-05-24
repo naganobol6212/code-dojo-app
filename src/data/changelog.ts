@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-g",
+    date: "2026-05-24",
+    title: "Ruby 基礎 rb-011〜015 の解説拡充 (Phase 3)",
+    badge: "content",
+    highlights: [
+      "rb-011 (unless) / rb-012 (ぼっち演算子 &.) / rb-013 (型混在と TypeError) / rb-014 (定数の慣習) / rb-015 (配列 + と <<)",
+      "各問に『噛み砕き / 自己説明 4 構造 / 選択肢解説 / 公式リンク』を追加",
+      "残り 15 問 (rb-016〜rb-030) は次の PR から順次拡充",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-f",
     date: "2026-05-24",
     title: "Ruby 基礎 rb-006〜010 の解説拡充 (Phase 2)",
