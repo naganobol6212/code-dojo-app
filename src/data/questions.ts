@@ -1237,6 +1237,12 @@ export const questions: Question[] = [
       '{"a"=>1, "b"=>2, "c"=>3}',
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`to_h` は `[key, value]` ペアの配列を Hash に変換。各内側配列の 0 番目がキー、1 番目が値になる。",
+      "`flatten` の結果 (フラット化された配列)。`to_h` は Hash を返すのでこの形にはならない。",
+      "正しいペア構造なら例外は出ない。要素が 2 要素配列でない場合のみ TypeError になる。",
+      "キーと値が逆。`to_h` は『配列の 0 番目 = キー』のルールで動く。",
+    ],
     hints: [
       "`to_h` は [key, value] ペアの配列を Hash に変換します。",
       "各内側配列の最初の要素がキー、2番目が値。",
@@ -1246,8 +1252,30 @@ export const questions: Question[] = [
       summary: "`to_h` は [key, value] 形式の配列を Hash に変換。",
       reason:
         "ペア配列 → Hash は頻出パターン。Ruby 2.6+ ではブロック付き `to_h { |x| [k, v] }` で変換ロジックも書けます。",
+      beginnerExplanation:
+        "**`to_h`** は **『[key, value] ペアの配列を Hash に変換する』** メソッドです。データ整形の最終ステップで超頻出。\n\n**基本**:\n```ruby\n[[1, 'a'], [2, 'b']].to_h\n# => {1=>'a', 2=>'b'}\n```\n\n**Ruby 2.6+ ブロック付き** (変換ロジックを書ける):\n```ruby\n[1, 2, 3].to_h { |n| [n, n.to_s] }\n# => {1=>'1', 2=>'2', 3=>'3'}\n```\n\n**よくあるパターン**:\n```ruby\n# zip でペアを作って to_h\n[:a, :b, :c].zip([1, 2, 3]).to_h\n# => {a: 1, b: 2, c: 3}\n\n# CSV パース\n'name=Alice&age=20'.scan(/(\\w+)=(\\w+)/).to_h\n# => {'name'=>'Alice', 'age'=>'20'}\n\n# Array → Hash (インデックスをキーに)\n['a', 'b', 'c'].each_with_index.to_h\n# => {'a'=>0, 'b'=>1, 'c'=>2}\n```\n\n**Hash を変換するパターン**:\n```ruby\n{ a: 1, b: 2 }.map { |k, v| [k, v * 2] }.to_h\n# => {a: 2, b: 4}\n\n# でも transform_values が綺麗\n{ a: 1, b: 2 }.transform_values { |v| v * 2 }\n# => {a: 2, b: 4}\n```\n\n**仲間メソッド**:\n- `to_h` — Array → Hash\n- `transform_keys` / `transform_values` — Hash のキー / 値だけ変換\n- `zip` — 2 つの配列をペア化\n- `each_slice` — N 個ずつチャンク化\n\n**🚨 エラーになる場合**:\n```ruby\n[1, 2, 3].to_h   # TypeError (要素が 2 要素配列でない)\n[[1, 2, 3]].to_h # TypeError (内側が 3 要素)\n```\n→ 各要素はちょうど 2 要素の配列でなければならない。",
+      modelSelfExplanation: {
+        conclusion:
+          "結果は `{1=>'a', 2=>'b', 3=>'c'}`。`to_h` は `[key, value]` ペアを要素とする配列を Hash に変換するメソッドで、内側配列の 0 番目がキー、1 番目が値になる。",
+        reason:
+          "Hash の表現として『キー・値のペアの集まり』があり、Ruby ではこれを配列の配列で表すことが多い (例: zip の結果や Hash#map の結果)。`to_h` はこれを Hash に変換する標準 API で、Ruby 2.6+ ではブロック付きで変換ロジックも書けるようになり、`map().to_h` をワンステップに圧縮できる。データ整形の最終ステップとして実務で頻出。",
+        example:
+          "URL クエリの解析 `query.split('&').map { |kv| kv.split('=') }.to_h`、配列 2 つから Hash 構築 `keys.zip(values).to_h`、設定オブジェクトの正規化 `data.scan(/(\\w+)=(.+)/).to_h`、ID 配列から Hash 化 `users.to_h { |u| [u.id, u] }` (ID 検索用キャッシュ) などで多用。Rails の attribute 関連でも `attributes.transform_keys(&:to_sym).to_h` のような正規化が定番。",
+        pitfall:
+          "各要素が 2 要素配列でないと TypeError。`[[1, 2, 3]].to_h` のような 3 要素配列は不可。さらにキーが重複した場合は『後勝ち』(最後の値が残る) なので、`[[1, 'a'], [1, 'b']].to_h` は `{1=>'b'}`。`group_by` + `transform_values` などと組み合わせて重複処理を明示するのが安全。",
+      },
       codeExample:
         '[[1,"a"], [2,"b"]].to_h   #=> {1=>"a", 2=>"b"}\n\n# ブロック付き (2.6+)\n[1,2,3].to_h { |n| [n, n.to_s] }   #=> {1=>"1", 2=>"2", 3=>"3"}\n\n# zip でペアを作って to_h\n[:a, :b, :c].zip([1, 2, 3]).to_h   #=> {a:1, b:2, c:3}\n\n# 元の Hash を変換\n{ a: 1, b: 2 }.map { |k, v| [k, v*2] }.to_h\n# => {a:2, b:4}  (transform_values の方が綺麗)',
+      commonMistakes: [
+        "要素が 2 要素配列でないと TypeError。",
+        "キー重複時は後勝ち。重複を意識するなら group_by などで明示処理。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Array#to_h",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Array/i/to_h.html",
+        },
+      ],
     },
   },
   {
@@ -1264,6 +1292,12 @@ export const questions: Question[] = [
       "[1, 2, 3, 4, 5]",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`each_slice(2)` は 2 個ずつに区切る。5 要素 = 2 + 2 + 1 で最後の塊は 1 個だけ。",
+      "奇数番目の要素抽出 (`select.with_index`) の結果。each_slice とは別物。",
+      "これは `each_cons(2)` (連続する 2 個の移動窓) の結果。each_slice とは違う。",
+      "そのままの配列。each_slice はチャンク化するので別の構造を返す。",
+    ],
     hints: [
       "`each_slice(n)` は n 個ずつに区切ります。",
       "余りは最後の塊に含まれます。",
@@ -1273,8 +1307,30 @@ export const questions: Question[] = [
       summary: "`each_slice(n)` は n 個ずつチャンクに分割する。",
       reason:
         "ページネーション、バッチ処理、N列に並べる表示などで頻用。`each_cons(n)` は連続する n 個 (移動窓) を返すので似て非なるもの。",
+      beginnerExplanation:
+        "**`each_slice(n)`** は **『N 個ずつのチャンクに区切る』** Enumerable メソッド。\n\n**動作**:\n```ruby\n[1, 2, 3, 4, 5].each_slice(2).to_a\n# => [[1, 2], [3, 4], [5]]\n#   ↑ 2 個    ↑ 2 個   ↑ 余り 1 個\n```\n\n**似ているが別物の `each_cons(n)`** — 連続する N 個の移動窓:\n```ruby\n[1, 2, 3, 4, 5].each_cons(2).to_a\n# => [[1, 2], [2, 3], [3, 4], [4, 5]]\n#   要素が重複しながら連続 N 個\n```\n\n**使い分け**:\n- `each_slice` → 重複なし、最後に余り。**ページネーション・バッチ処理** に使う\n- `each_cons` → 重複あり、連続する組。**移動平均・連続パターン検出** に使う\n\n**実例**:\n```ruby\n# ページネーション (10 件ずつ)\nresults.each_slice(10).with_index { |page, i| send_email(page, i+1) }\n\n# バッチ処理 (1000 件ずつ)\nUser.where(active: true).find_in_batches(batch_size: 1000) do |batch|\n  # find_in_batches は内部で each_slice 的に動く\nend\n\n# CSV を 2 列表示\nrows.each_slice(2) { |left, right| puts \"#{left} | #{right}\" }\n\n# 移動平均 (each_cons)\n[1, 2, 3, 4, 5].each_cons(3).map { |window| window.sum / 3.0 }\n# => [2.0, 3.0, 4.0]\n```\n\n**ブロック vs Enumerator**:\n```ruby\n# ブロック付き (副作用)\n[1,2,3,4,5].each_slice(2) { |chunk| puts chunk.inspect }\n\n# ブロックなし (Enumerator が返る、to_a で配列化)\n[1,2,3,4,5].each_slice(2).to_a\n[1,2,3,4,5].each_slice(2).map { |chunk| chunk.sum }  # => [3, 7, 5]\n```\n\n**Rails の `find_each` / `find_in_batches` との関係**: DB バッチ処理は内部で各 slice / cons パターンを使っている。大量データ処理の基本パターン。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は `[[1, 2], [3, 4], [5]]`。`each_slice(2)` は配列を 2 個ずつのチャンクに区切り、最後に余り (1 個) があれば含めて返す。",
+        reason:
+          "`each_slice` は『N 件ずつ処理』というバッチ処理の典型パターンを表現する Enumerable メソッド。ページネーション・大量データのバッチ送信・N 列表示など実務で多用される。よく似た `each_cons(n)` は『連続する N 個の移動窓』を返すため、用途は移動平均や連続パターン検出と全く違う。両者を区別することで、Ruby のコレクション処理の表現力が一段上がる。",
+        example:
+          "メール一斉送信を 100 件ずつ送る `recipients.each_slice(100) { |batch| Mailer.bulk(batch).deliver_later }`、CSV を 1000 行ずつインポート `csv_rows.each_slice(1000) { |chunk| import!(chunk) }`、表示を 3 列に並べる view で `items.each_slice(3) do |row| ... end`、株価の 5 日移動平均 `prices.each_cons(5).map { |w| w.sum / 5 }`、など。Rails の find_in_batches も内部的に each_slice 系の処理。",
+        pitfall:
+          "`each_slice` と `each_cons` を取り違える。`each_cons` の重複ありセマンティクスを忘れて意図せぬ結果。さらに巨大配列に `.to_a` を呼ぶと全件メモリにロードしてしまうので、ストリーム処理には `each_slice(N) { |c| ... }` のブロック形態を使う。AR の find_in_batches は ActiveRecord 関連の特殊メソッドで、純 Ruby の each_slice とは異なる (DB レベルで LIMIT/OFFSET 発行)。",
+      },
       codeExample:
         "[1,2,3,4,5].each_slice(2).to_a\n#=> [[1,2], [3,4], [5]]\n\n[1,2,3,4,5].each_cons(2).to_a\n#=> [[1,2], [2,3], [3,4], [4,5]]\n\n# Rails: 1000件ずつ DB から取り出して処理\nUser.find_each(batch_size: 1000) { |u| ... }",
+      commonMistakes: [
+        "each_slice (重複なし) と each_cons (重複あり) を取り違える。",
+        "巨大配列に `.to_a` を付けると OOM。ブロック形態で逐次処理する。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerable#each_slice / #each_cons",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/each_slice.html",
+        },
+      ],
     },
   },
   {
@@ -1294,8 +1350,30 @@ export const questions: Question[] = [
       summary: "`Array#reverse` は要素を逆順にした新しい配列を返す。",
       reason:
         "順序の反転は配列・文字列で共通の `reverse`。破壊版 `reverse!` もあり。Enumerable には `reverse_each` もあって、ブロックを逆順に実行できます。",
+      beginnerExplanation:
+        "**`reverse`** は **配列や文字列を逆順** にする基本メソッド。\n\n**Array**:\n```ruby\n[1, 2, 3].reverse        # => [3, 2, 1]\n```\n\n**String** (同名で同じ動作):\n```ruby\n'hello'.reverse          # => 'olleh'\n```\n\n**仲間**:\n- `reverse` — 逆順の新しい配列 / 文字列を返す (非破壊)\n- `reverse!` — 元の配列 / 文字列を逆順に書き換える (破壊)\n- `reverse_each` — Enumerable のメソッド、ブロックを逆順に実行 (新配列を作らない)\n\n```ruby\n[1, 2, 3].reverse_each { |n| puts n }\n# 3\n# 2\n# 1\n```\n\n**応用**:\n```ruby\n# 降順ソート (2 通り)\n[3, 1, 2].sort.reverse                # → [3, 2, 1]\n[3, 1, 2].sort { |a, b| b <=> a }     # → [3, 2, 1]  (こちらの方が効率的)\n\n# 最新順に並べる\nposts.sort_by(&:created_at).reverse\n# 直接降順ソート\nposts.sort_by { |p| -p.created_at.to_i }\n```\n\n**Rails の `User.order(created_at: :desc)`** は DB レベルでの降順、こちらが大量データでは効率的。`reverse` はメモリ上の操作。\n\n**Range の reverse**:\n```ruby\n(1..5).to_a.reverse       # → [5, 4, 3, 2, 1]\n# Range 自体に reverse はないので to_a が必要\n```",
+      modelSelfExplanation: {
+        conclusion:
+          "メソッド名は `reverse`。Array にも String にも同名で存在し、要素 / 文字を逆順にした新しいオブジェクトを返す (非破壊)。破壊版は `reverse!`、Enumerable には `reverse_each` もある。",
+        reason:
+          "順序反転は配列・文字列・列挙オブジェクトで共通の基本操作で、Ruby は `reverse` という直感的な英単語でこれを統一している。非破壊版が標準 (新オブジェクトを返す) で、明示的に元を書き換えたければ `!` 付きの破壊版を使う、という Ruby の慣習に従っている。reverse_each は配列を作らずに逆順走査だけしたい場面 (メモリ節約) で便利。",
+        example:
+          "ログを新しい順に表示する `logs.reverse.first(10)`、文字列を逆順で回文判定 `s == s.reverse`、降順ソート `users.sort.reverse` (ただし `sort_by { |u| -u.score }` の方が効率的)、Range の to_a.reverse でカウントダウンループ `(1..10).to_a.reverse.each { |n| puts n }`、など。Rails では DB レベルの ORDER BY DESC を使う方が大量データで効率的。",
+        pitfall:
+          "Array#reverse は元の配列を変更しない (非破壊) ので、結果を変数で受けないと変更が失われる。`array = array.reverse` または `array.reverse!` を使う。大量データに対する reverse は全件をコピーするため重い、本当に大量なら DB レベルの ORDER BY DESC や reverse_each を使う。",
+      },
       codeExample:
         '[1,2,3].reverse        #=> [3, 2, 1]\n"hello".reverse        #=> "olleh"\n\n[1,2,3].reverse_each { |n| puts n }\n# 3\n# 2\n# 1\n\n# 配列のソート + 逆順\n[3,1,2].sort.reverse   #=> [3, 2, 1]\n# または\n[3,1,2].sort { |a,b| b <=> a }   #=> [3, 2, 1]',
+      commonMistakes: [
+        "reverse の結果を変数に代入し忘れる (非破壊なので元配列は変わらない)。",
+        "大規模ソートで `sort.reverse` するより `sort_by { |x| -x }` の方が 1 パスで効率的。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Array#reverse",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Array/i/reverse.html",
+        },
+      ],
     },
   },
   {
@@ -1312,6 +1390,12 @@ export const questions: Question[] = [
       '["apple", "banana", "cherry"]',
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`group_by` はブロックの戻り値 (今回は length) をキーに、対応する要素を配列で集めた Hash を返す。apple=5 文字、banana/cherry=6 文字 でグループ化される。",
+      "最初の文字でグループ化したい場合は `group_by { |w| w[0] }` と書く。length ではない。",
+      "length の配列。`map(&:length)` の結果で、group_by ではない。",
+      "そのままの配列。group_by は構造化された Hash を返すので、元配列のままにはならない。",
+    ],
     hints: [
       "`group_by` はブロックの戻り値をキーにして要素をグルーピング。",
       "apple は 5 文字、banana と cherry は 6 文字。",
@@ -1322,8 +1406,30 @@ export const questions: Question[] = [
         "`group_by` はブロック戻り値をキーに { キー => [要素…] } を返す。",
       reason:
         "ピボット・集計の入口。SQL の GROUP BY 相当を Ruby のコレクションで実現。Rails でも `User.all.group_by(&:role)` のように使えます。",
+      beginnerExplanation:
+        "**`group_by`** は **『ブロックの戻り値でグルーピングする』** Enumerable メソッド。SQL の `GROUP BY` 相当をメモリ上で実現。\n\n**動作**:\n```ruby\n['apple', 'banana', 'cherry'].group_by { |w| w.length }\n# 各要素のブロック戻り値:\n#   'apple' → 5\n#   'banana' → 6\n#   'cherry' → 6\n# グループ化:\n# => {5 => ['apple'], 6 => ['banana', 'cherry']}\n```\n\n**Hash の構造**: `{グループキー => [そのグループに属する要素]}`\n\n**応用例**:\n```ruby\n# 数値を 3 で割った余りでグループ化\n[1,2,3,4,5,6].group_by { |n| n % 3 }\n# => {1=>[1,4], 2=>[2,5], 0=>[3,6]}\n\n# ユーザを role でグループ化 (Rails)\nusers.group_by(&:role)\n# => {'admin' => [user1, user2], 'user' => [user3, ...]}\n\n# 月別投稿\nposts.group_by { |p| p.created_at.month }\n```\n\n**件数だけ欲しい場合は `tally` (Ruby 2.7+)**:\n```ruby\n['a', 'b', 'a', 'c', 'a'].tally\n# => {'a'=>3, 'b'=>1, 'c'=>1}\n\n# group_by + count でも同じ\nusers.group_by(&:role).transform_values(&:count)\n# => {'admin'=>3, 'user'=>17}\n```\n\n**`partition` との違い**:\n- `partition` → 2 つ (条件 true / false) に分ける、Boolean ベース\n- `group_by` → 任意のキーで複数グループに分ける\n\n**Rails の `User.group(:role).count`** (SQL レベル) との対比:\n- メモリ → `users.group_by(&:role).transform_values(&:count)` (全件ロード必要)\n- DB → `User.group(:role).count` (SQL の COUNT、効率的)\n\nDB 操作なら必ず SQL の `GROUP BY` を使う。Ruby の `group_by` は『データが既にメモリにある』場面で。",
+      modelSelfExplanation: {
+        conclusion:
+          "結果は `{5=>['apple'], 6=>['banana', 'cherry']}`。`group_by` はブロックの戻り値 (今回は length) をキーに、対応する要素を配列で集めた Hash を返す。SQL の GROUP BY 相当をメモリ上で実現するメソッド。",
+        reason:
+          "`group_by` はピボット集計の入口で、『同じ特徴を持つ要素をまとめる』という基本操作を 1 メソッドで提供する。戻り値が Hash なので、その後 `transform_values(&:count)` で件数集計、`transform_values(&:sum)` で合計、`sort_by { |k, v| -v.size }` で件数順ソートなど、メソッドチェーンで様々な集計が組み立てられる。SQL の GROUP BY と同じ概念だが、こちらは Ruby のメモリ上で動く。",
+        example:
+          "投稿を年月でグループ化してアーカイブ表示 `posts.group_by { |p| p.created_at.strftime('%Y-%m') }`、ユーザを役職別に集計 `User.all.group_by(&:role).transform_values(&:count)`、商品をカテゴリ別に並べ替え `products.group_by(&:category)`、ログレベル別の件数 `log_lines.tally`、など。Rails の DB レベル集計と組み合わせ可能 (大量データなら DB レベル優先)。",
+        pitfall:
+          "メモリ上の `group_by` は全要素を読み込んでから処理するため、巨大コレクション (100 万件等) では OOM。DB データなら ActiveRecord の `group(:role).count` で SQL レベル集計するのが正解。さらに group_by の戻り値が空 Hash になるケース (空配列入力) を考慮しないと、その後の chain でエラーになる可能性がある。",
+      },
       codeExample:
         '[1,2,3,4,5,6].group_by { |n| n % 3 }\n#=> {1=>[1,4], 2=>[2,5], 0=>[3,6]}\n\n# シンプルに件数だけ欲しい時は tally (2.7+)\n["a", "b", "a", "c", "a"].tally\n#=> {"a"=>3, "b"=>1, "c"=>1}\n\nusers.group_by(&:role).transform_values(&:count)\n#=> {"admin"=>3, "user"=>17}',
+      commonMistakes: [
+        "大量データで group_by する → OOM。DB データなら ActiveRecord の group(:role).count を使う。",
+        "件数だけなら group_by + transform_values より tally (2.7+) の方が簡潔。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerable#group_by / #tally",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/group_by.html",
+        },
+      ],
     },
   },
   {
@@ -1340,6 +1446,12 @@ export const questions: Question[] = [
       "両者は完全に同じ",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "両者とも非破壊的 (元の配列を変更しない)。違いは破壊性ではなく『戻り値』。",
+      "正解。`each` は副作用目的でレシーバ自身を返す、`map` は変換目的でブロックの戻り値を集めた新しい配列を返す。",
+      "両者とも Hash でも使える (each は key/value のペアを、map は変換結果を返す)。",
+      "戻り値が全く違うので同じではない。each の結果を変換後の配列だと思って使うとバグになる。",
+    ],
     hints: [
       "戻り値に注目してください。",
       "each はループ用、map は変換用。",
@@ -1350,10 +1462,29 @@ export const questions: Question[] = [
         "each はレシーバ自身を返す (副作用用)、map は変換後の新しい配列を返す。",
       reason:
         "each はループ目的 (puts や DB 書き込みなど副作用) で、戻り値は使わない前提。map は変換目的で戻り値を使う。誤って each で配列を生成しようとすると `result = [].tap { |a| arr.each { |x| a << x*2 } }` のように冗長になるので map を使う。",
+      beginnerExplanation:
+        "**`each` と `map` の違い** は **戻り値** にあります。よく似ているが用途が全く違う。\n\n**`each`** — 副作用用 (ループ)\n```ruby\nresult = [1, 2, 3].each { |n| n * 2 }\nresult  # => [1, 2, 3]   ← レシーバ自身が返る\n```\nブロックの戻り値は **無視され**、`each` 自体は元の配列を返す。\n\n**`map`** — 変換用\n```ruby\nresult = [1, 2, 3].map { |n| n * 2 }\nresult  # => [2, 4, 6]   ← ブロック戻り値の新配列\n```\nブロックの戻り値を **集めて新しい配列** にして返す。\n\n**使い分け**:\n- 副作用 (`puts`, DB 書き込み, ログ出力) → **`each`**\n  ```ruby\n  users.each { |u| u.send_email }\n  ```\n- 変換して配列が欲しい → **`map`**\n  ```ruby\n  ages = users.map(&:age)\n  ```\n\n**よくあるアンチパターン**:\n```ruby\n# ❌ each で配列を構築 (冗長)\nresult = []\n[1, 2, 3].each { |n| result << n * 2 }\n\n# ✅ map を使う\nresult = [1, 2, 3].map { |n| n * 2 }\n```\n\n**Hash の場合**:\n```ruby\n# each: ペアを副作用処理\n{a: 1, b: 2}.each { |k, v| puts \"#{k}=#{v}\" }\n\n# map: 配列を返す\n{a: 1, b: 2}.map { |k, v| [k, v*2] }  # => [[:a, 2], [:b, 4]]\n```\n\n**仲間**:\n- `each` — 副作用\n- `each_with_index` — インデックス付き each\n- `each_with_object` — オブジェクトを引き連れて each (`inject` の代替)\n- `map` — 変換\n- `flat_map` — map + flatten(1) を 1 ステップで\n- `filter_map` — map + compact を 1 ステップで (Ruby 2.7+)",
+      modelSelfExplanation: {
+        conclusion:
+          "`each` はレシーバ自身を返し副作用 (ループ) 用、`map` はブロック戻り値の新しい配列を返し変換用。両者の最大の違いは『戻り値』。",
+        reason:
+          "Ruby のコレクション操作には『データを変更せずに新しい配列を作る (関数型スタイル: map / select / reduce)』と『副作用を起こす (each / tap)』の 2 種類があり、明示的に使い分けることでコードの意図が読み手に伝わる。each は『戻り値を使わない』前提なので、戻り値は『self を返しておく』だけのシンプルな仕様 (Method Chaining が続けられる)。map は『各要素から新しい値を作る』ためにブロック戻り値を集めて新配列を返す。",
+        example:
+          "DB 操作で `users.each(&:send_email)` (副作用)、配列変換で `user_ids = users.map(&:id)` (変換)、メソッドチェーンで `users.select(&:active?).map(&:name).sort` (絞り込み → 変換 → ソート)、副作用ありの変換は『副作用は each で、変換は map で』と分けて書く方が読みやすい。",
+        pitfall:
+          "each で配列を構築するアンチパターン (`result = []; arr.each { |x| result << x*2 }`) は冗長で、map を知らないと書きがち。逆に副作用目的で map を使うと『戻り値の新配列がメモリに残る』ため無駄。`each` の戻り値を変換結果だと思って `arr.each { |x| x*2 }.first` のように書くと元の配列が返ってきて挙動がおかしくなる。意図を明示するために、副作用は each、変換は map と使い分けるのが鉄則。",
+      },
       codeExample:
         "result = [1,2,3].each { |n| n * 2 }   # 戻り値は [1,2,3]\nresult = [1,2,3].map  { |n| n * 2 }   # 戻り値は [2,4,6]\n\n# 副作用が目的なら each\n[1,2,3].each { |n| puts n }\n\n# 配列が欲しいなら map\ndoubled = [1,2,3].map { |n| n * 2 }",
       commonMistakes: [
         "`arr.each.map { ... }` のように混ぜると Enumerator 経由になり遅い。普通は `arr.map { ... }`",
+        "each で配列を構築するアンチパターン。map を使う。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Array#each / #map",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Array/i/each.html",
+        },
       ],
     },
   },

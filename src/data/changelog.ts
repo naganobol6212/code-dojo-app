@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-y",
+    date: "2026-05-24",
+    title: "Collections col-006〜010 の解説拡充 (Phase 2)",
+    badge: "content",
+    highlights: [
+      "col-006 (to_h と Hash 変換) / col-007 (each_slice vs each_cons) / col-008 (reverse) / col-009 (group_by + tally) / col-010 (each vs map)",
+      "コレクション操作の組み合わせと使い分けを実例ベースで深掘り",
+      "collections 進捗 10/16",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-x",
     date: "2026-05-24",
     title: "Collections カテゴリの解説拡充スタート (col-001〜005)",
