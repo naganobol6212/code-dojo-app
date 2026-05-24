@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-b",
+    date: "2026-05-25",
+    title: "Ruby Advanced adv-006〜010 の解説拡充 (Phase 2)",
+    badge: "content",
+    highlights: [
+      "adv-006 (method_missing) / adv-007 (define_method) / adv-008 (Enumerator) / adv-009 (Module の特異メソッド) / adv-010 (クロージャ)",
+      "Ruby メタプログラミングの中核を実例で深掘り",
+      "進捗: 116/149 問 (78%)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-a",
     date: "2026-05-25",
     title: "Ruby Advanced カテゴリの解説拡充スタート (adv-001〜005)",

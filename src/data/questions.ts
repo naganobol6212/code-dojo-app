@@ -2699,6 +2699,12 @@ export const questions: Question[] = [
     code: "class Foo\n  def method_missing(name, *args)\n    \"called: #{name}\"\n  end\nend\n\nputs Foo.new.anything",
     choices: ["called: anything", "NoMethodError", "nil", "anything"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`method_missing` を override しているので、未定義メソッド `anything` の呼び出しが捕捉され、`'called: anything'` が返って puts で出力される。",
+      "method_missing が定義されているので NoMethodError は発生しない。method_missing が無ければ通常通り例外。",
+      "method_missing は文字列を返しており、puts はその文字列を出力する。nil にはならない。",
+      "メソッド名だけではなく、`'called: '` という接頭辞付きの文字列が返る。",
+    ],
     hints: [
       "`method_missing` は未定義メソッド呼び出し時のフック。",
       "メタプログラミングで動的にメソッドを実装する手法。",
@@ -2709,10 +2715,29 @@ export const questions: Question[] = [
         "`method_missing` は未定義メソッド呼び出し時のフック。動的メソッド定義に使われる。",
       reason:
         "Ruby は呼び出されたメソッドが無い時、最後の手段として `method_missing(name, *args, &blk)` を呼ぶ。Rails の `find_by_name`、OpenStruct、ActiveModel::AttributeMethods など多くの『魔法』の実装方法。",
+      beginnerExplanation:
+        "**`method_missing`** は **『未定義メソッドが呼ばれた時に呼ばれる最後のフック』**。Ruby のメタプログラミングの代表機能で、多くの『魔法』のような DSL や ORM の裏側で使われています。\n\n**動作の流れ**:\n1. `obj.foo` を呼ぶ\n2. Ruby が obj のクラス階層を辿って `foo` メソッドを探す\n3. 見つからない → `obj.method_missing(:foo, *args, &blk)` を呼ぶ\n4. これも定義されていなければ最終的に NoMethodError\n\n**典型例 (デリゲーション)**:\n```ruby\nclass Proxy\n  def initialize(target); @target = target; end\n\n  def method_missing(name, *args, &blk)\n    puts \"delegating: #{name}\"\n    @target.public_send(name, *args, &blk)\n  end\n\n  def respond_to_missing?(name, include_private = false)\n    @target.respond_to?(name, include_private)\n  end\nend\n\nProxy.new([1, 2, 3]).length\n# delegating: length\n# => 3\n```\n\n**実例**:\n- ActiveRecord の `find_by_name`, `find_by_email_and_status` などの動的ファインダー\n- OpenStruct (任意の属性を後付け)\n- Rails の `ActiveModel::AttributeMethods` (属性アクセサの自動生成)\n- 各種 DSL (Sinatra, RSpec の matcher)\n\n**🚨 必ず `respond_to_missing?` も override**:\nmethod_missing だけ実装して respond_to_missing? を書かないと、`obj.respond_to?(:foo)` が嘘 (false) を返すので、メタプロを使う他のコードが壊れる。\n\n**注意点**:\n- パフォーマンス上のオーバーヘッドあり (通常のメソッド呼び出しより遅い)\n- デバッグが難しい (どこで定義されたメソッドか追えない)\n- IDE 補完が効かない\n→ できる限り `define_method` での動的定義に切り替える方が現代的",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は `called: anything`。`method_missing` を override したクラスは未定義メソッド呼び出し時にこのフックが起動し、`name` 引数 (Symbol) で呼ばれたメソッド名を受け取る。文字列補間で `'called: anything'` が返り puts で出力。",
+        reason:
+          "Ruby のメソッド解決は ancestors を辿って探索し、見つからなければ最後に method_missing にフォールバックする仕組み。これにより『動的にメソッドを生やす』『他のオブジェクトに委譲する』『DSL を実装する』など、メタプログラミング全般の基盤となる。Rails の動的ファインダー (`find_by_email`) や OpenStruct、Forwardable, ActiveModel::AttributeMethods など多くの『魔法』の正体は method_missing + respond_to_missing? の組み合わせ。",
+        example:
+          "委譲パターンで `class LoggedRecord; def method_missing(*); record_log!; super; end; end`、動的属性で `class Config; def method_missing(name, *); @data[name.to_s]; end; end`、DSL ビルダーで `class Form; def method_missing(name, value); @fields[name] = value; end; end` などで活用される。Rails の見えない場所で頻繁に使われている。",
+        pitfall:
+          "method_missing だけ override して respond_to_missing? を忘れると、`obj.respond_to?(:foo)` が嘘 (false) を返す。Duck Typing で振る舞いをチェックするコードがすべて壊れる。さらに method_missing は通常メソッド呼び出しより遅いため (探索コスト)、頻繁に呼ばれるパスには使わない。デバッグが難しい (`grep` でメソッド定義箇所を探せない) ので、現代では define_method による事前定義が推奨される。",
+      },
       codeExample:
         'class Proxy\n  def initialize(target); @target = target; end\n  def method_missing(name, *args, &blk)\n    puts "delegating: #{name}"\n    @target.public_send(name, *args, &blk)\n  end\n  def respond_to_missing?(name, include_private = false)\n    @target.respond_to?(name, include_private)\n  end\nend\n\nProxy.new([1,2,3]).length  # delegating: length →3',
       commonMistakes: [
         "method_missing を override したら必ず `respond_to_missing?` も override する (`respond_to?` が正しく動くため)。",
+        "頻繁呼び出しのパスで method_missing を使うとパフォーマンス影響あり。define_method で事前定義を検討。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: BasicObject#method_missing",
+          url: "https://docs.ruby-lang.org/ja/latest/method/BasicObject/i/method_missing.html",
+        },
       ],
     },
   },
@@ -2734,8 +2759,30 @@ export const questions: Question[] = [
         "`define_method` で実行時に動的にメソッドを定義できる (メタプログラミング)。",
       reason:
         "ループでメソッド群を一括定義したり、設定に応じてメソッド生成したりする時に使う。`def` と違ってクロージャを作る (周囲の変数を捕捉する) のが大きな違い。",
+      beginnerExplanation:
+        "**`define_method`** は **実行時にメソッドを動的に定義** するメタプログラミングの基本ツール。`def` と違い、ループや条件分岐の中で使え、**クロージャ** (周囲の変数を捕捉) もできます。\n\n**典型例 (attr_accessor の自前実装)**:\n```ruby\nclass User\n  [:name, :email, :age].each do |attr|\n    define_method(attr) do\n      instance_variable_get(\"@#{attr}\")\n    end\n\n    define_method(\"#{attr}=\") do |val|\n      instance_variable_set(\"@#{attr}\", val)\n    end\n  end\nend\n\nu = User.new\nu.name = 'Alice'\nu.name  # => 'Alice'\n```\n\n**`def` との違い**:\n```ruby\n# def はクロージャを作らない\nname = 'world'\ndef greet\n  name   # NameError (def はスコープを切る)\nend\n\n# define_method はクロージャを作る\nname = 'world'\ndefine_method(:greet) { name }   # 'world' を捕捉\n```\n\n**`method_missing` との使い分け**:\n| | define_method | method_missing |\n|---|---|---|\n| 定義タイミング | 事前 (起動時) | 呼び出し時 |\n| パフォーマンス | 通常 | やや遅い |\n| respond_to? | 自動で true | 別途 respond_to_missing? が必要 |\n| デバッグ | 容易 (Method オブジェクト取得可) | 困難 |\n\n→ **可能なら define_method を優先** (パフォーマンスとデバッグ性の両面で有利)\n\n**実用例**:\n```ruby\n# 設定からアクセサ生成\nclass Config\n  [:host, :port, :timeout].each do |attr|\n    define_method(attr) { @data[attr] }\n  end\nend\n\n# Rails の attr_accessor も内部で define_method を使う\n```\n\n**`alias_method`** / **`alias`** / **`alias_method_chain`** とも組み合わせてメソッドのラッピングが可能。",
+      modelSelfExplanation: {
+        conclusion:
+          "メソッド名は `define_method`。Module の private インスタンスメソッドで、`define_method(:name) { ... }` の形で実行時にメソッドを動的定義する。`def` と違いクロージャを作るので、周囲のローカル変数を捕捉できる。",
+        reason:
+          "Ruby の def キーワードは新しいスコープを切るため、その時点のローカル変数や引数を捕捉できない。一方 define_method はブロックを受け取るためクロージャとして動き、周囲の変数を保持したメソッドを動的に作れる。これにより『同じパターンのメソッドを 10 個一気に定義』『設定値を捕捉した getter を生成』など、宣言的なメタプログラミングが可能になる。Rails の attr_accessor / Devise の helper / API クライアントの動的メソッドなど、内部実装で広く使われている。",
+        example:
+          "attr_accessor 相当 `[:name, :email].each { |a| define_method(a) { instance_variable_get(\"@#{a}\") } }`、Devise の helper 自動生成 (User モデル定義時に `user_signed_in?` が生える)、API クライアントで `[:get, :post, :put, :delete].each { |verb| define_method(verb) { |path| send_request(verb, path) } }` でメソッド一括定義、など。",
+        pitfall:
+          "`def` と違って毎回 Proc オブジェクトを内部で作るため、通常メソッドより若干オーバーヘッドあり (誤差レベル)。さらに define_method で定義するメソッドは Method オブジェクトとして見えるが『どこで定義されたか』が grep しにくいのでドキュメント化が重要。動的すぎる定義は IDE 補完が効かない / リファクタリングが困難なので、本当に必要な場合だけ使う。",
+      },
       codeExample:
         'class User\n  [:name, :email, :age].each do |attr|\n    define_method(attr) do\n      instance_variable_get("@#{attr}")\n    end\n\n    define_method("#{attr}=") do |val|\n      instance_variable_set("@#{attr}", val)\n    end\n  end\nend\n# attr_accessor と同じことを動的に実装\n\nu = User.new\nu.name = "Alice"\nu.name  #=> "Alice"',
+      commonMistakes: [
+        "def との違い (クロージャを作る vs 作らない) を理解せず、周囲変数の参照に依存して define_method を選ぶ必要がある場面で def を使う。",
+        "動的定義の乱用で IDE 補完が効かず、新規参加者の学習コストが上がる。本当に必要な場面だけ使う。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Module#define_method",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Module/i/define_method.html",
+        },
+      ],
     },
   },
   {
@@ -2752,6 +2799,12 @@ export const questions: Question[] = [
       "Array / nil",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。ブロック無し each は Enumerator を返し、その class は Enumerator。next で最初の要素 1 を返す。",
+      "ブロック無し each の戻り値は Array ではなく Enumerator。クラス表示は Enumerator になる。",
+      "Enumerator#next は要素を順に返すので最初は 1。nil が返るのは StopIteration 後。",
+      "両方とも誤り。each はブロック無しなら Enumerator、next は最初の要素 1 を返す。",
+    ],
     hints: [
       "ブロックを渡さない each はどんなオブジェクトを返す？",
       "Enumerator は遅延・外部イテレータ的に使えるオブジェクト。",
@@ -2762,8 +2815,30 @@ export const questions: Question[] = [
         "ブロック無し each は Enumerator を返す。`next` で外部イテレータとして使える。",
       reason:
         "Enumerable のメソッド (each / map / select 等) はブロック無し呼び出しで Enumerator を返す。チェーンや遅延評価、外部イテレータ的処理に便利。`Enumerator::Lazy` で無限列も扱える。",
+      beginnerExplanation:
+        "**Enumerator** は Ruby の **『遅延評価できるイテレータ』** オブジェクト。each や map などをブロック無しで呼ぶと自動的に返ってきます。\n\n**動作**:\n```ruby\n[1, 2, 3].each.class      # => Enumerator\n[1, 2, 3].each.next       # => 1\n```\n\nブロック付きで呼ぶと普通にイテレートして配列を返すが、**ブロック無し** で呼ぶと **Enumerator** が返る。\n\n**Enumerator の使い道**:\n\n**1. 外部イテレータとして使う**:\n```ruby\ne = [1, 2, 3].each\ne.next   # => 1\ne.next   # => 2\ne.next   # => 3\ne.next   # StopIteration 例外\n```\n他言語の `iterator.next()` のように、明示的に 1 件ずつ取り出せる。\n\n**2. メソッドチェーンの中継**:\n```ruby\n[1, 2, 3].map.with_index { |x, i| \"#{i}:#{x}\" }\n# => ['0:1', '1:2', '2:3']\n```\n`map.with_index` の `map` 部分はブロック無しで Enumerator を返し、`with_index` で添字付きにしてからブロックを実行。\n\n**3. 遅延評価 (`lazy`) で無限列も扱える**:\n```ruby\n(1..).lazy.map { |n| n * n }.first(5)\n# => [1, 4, 9, 16, 25]\n```\n`(1..)` は無限 Range だが、`lazy` で必要な分だけ評価。`first(5)` で 5 要素だけ取り出す。\n\n**実用例**:\n```ruby\n# 巨大ファイルの行を遅延処理\nFile.open('huge.log').lazy.map(&:strip).reject(&:empty?).first(100)\n\n# 並列イテレート (zip と組み合わせ)\n[1,2,3].zip([:a,:b,:c]).each { |n, sym| puts \"#{n}:#{sym}\" }\n```\n\n**Tip**: 巨大データの処理では `Enumerator::Lazy` を活用するとメモリ効率が劇的に向上。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は『Enumerator / 1』。`[1,2,3].each` をブロックなしで呼ぶと Enumerator オブジェクトを返し、その `next` メソッドで外部イテレータとして最初の要素 1 を取り出せる。",
+        reason:
+          "Enumerable のメソッド (each / map / select / reject 等) は『ブロックを渡せば即時実行、ブロックなしなら Enumerator を返す』という二重の API デザインになっている。Enumerator は遅延列挙オブジェクトで、外部イテレータ的に next で 1 件ずつ取り出す、メソッドチェーンの中継 (map.with_index)、`lazy` で無限列を扱う、など複数の用途を持つ。これにより巨大データや無限列を効率的に処理できる。",
+        example:
+          "外部イテレータで `e = arr.each; e.next` を 1 件ずつ消費、`(1..).lazy.select(&:prime?).first(10)` で素数を 10 件取得 (lazy で無限を扱う)、`File.foreach('huge.log').lazy.map(&:strip).reject(&:empty?).first(100)` で巨大ファイルを遅延処理、Fiber と組み合わせた generator パターン、など。",
+        pitfall:
+          "Enumerator#next は呼び終わると StopIteration 例外を投げる。普通の Ruby コードでは each ブロックを使うほうが安全 (この例外を意識しなくて良い)。さらに lazy を呼び忘れると無限列でメモリ爆発するので、`(1..).map { ... }` のように lazy なしで Enumerator を消費すると永遠にループ。",
+      },
       codeExample:
         '[1,2,3].each              # Enumerator: #<Enumerator: [1,2,3]:each>\n[1,2,3].map.with_index { |x, i| "#{i}:#{x}" }\n#=> ["0:1", "1:2", "2:3"]\n\n# 外部イテレータ\ne = [1,2,3].each\ne.next  #=> 1\ne.next  #=> 2\n\n# 無限列を扱う\n(1..).lazy.map { |n| n*n }.first(5)\n#=> [1, 4, 9, 16, 25]',
+      commonMistakes: [
+        "Enumerator#next を呼び終わると StopIteration 例外。each ブロックを使う方が安全。",
+        "無限列に lazy を忘れるとメモリ爆発。`(1..).lazy.map { ... }.first(N)` のパターン。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerator / Enumerator::Lazy",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Enumerator.html",
+        },
+      ],
     },
   },
   {
@@ -2780,6 +2855,12 @@ export const questions: Question[] = [
       "両方 NoMethodError",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`def self.hello` は M の特異メソッド (= モジュール自身に紐づく) で include されない。A.hello は NoMethodError → rescue で 'no method'。M.hello は直接モジュールに定義されているので 'from M'。",
+      "A.hello は呼べない (include は特異メソッドを取り込まない)。両方が 'from M' になるのは extend した場合や ClassMethods パターンを使った場合。",
+      "M.hello はモジュール自身に直接定義されているので呼べる。両方 NoMethodError にはならない。",
+      "rescue があるので少なくとも A.hello はキャッチされる。両方とも例外が表示されない。",
+    ],
     hints: [
       "`def self.hello` は Module の特異メソッド (= モジュール直接呼び出し用)。",
       "include しても特異メソッドはコピーされない。",
@@ -2790,8 +2871,30 @@ export const questions: Question[] = [
         "Module の特異メソッド (`def self.x`) は include 先のクラスメソッドにはならない。",
       reason:
         "クラスメソッドとして取り込みたい場合は `extend` を使うか、`module ClassMethods` パターン (Rails でお馴染み) を使う。",
+      beginnerExplanation:
+        "**Module の特異メソッドと include の関係** を正しく理解しているかが問われる、メタプログラミングの定番落とし穴。\n\n**Module の 2 種類のメソッド定義**:\n```ruby\nmodule M\n  def self.hello             # 特異メソッド (M.hello で呼ぶ)\n    'from M'\n  end\n\n  def instance_m              # インスタンスメソッド\n    'instance'                # include した先のインスタンスから呼ぶ\n  end\nend\n```\n\n**`include` の挙動**:\n- インスタンスメソッド → 取り込む (`A.new.instance_m` で呼べる)\n- 特異メソッド → **取り込まれない** (`A.hello` は NoMethodError)\n\n**クラスメソッドとして取り込みたい場合の選択肢**:\n\n**1. `extend` を使う**:\n```ruby\nclass A\n  extend M    # M のメソッドが A のクラスメソッドに\nend\nA.hello   # 呼べる (ただし M に特異メソッドではなくインスタンスメソッドを書く)\n```\n\n**2. ClassMethods パターン (Rails でお馴染み)**:\n```ruby\nmodule M\n  def instance_m; end                    # include 先のインスタンス用\n\n  module ClassMethods\n    def class_m; end                     # include 先のクラスメソッド用\n  end\n\n  def self.included(base)\n    base.extend(ClassMethods)             # include 時に自動で extend\n  end\nend\n\nclass A\n  include M\nend\n\nA.new.instance_m   # OK\nA.class_m          # OK\n```\n\n**Rails の `ActiveSupport::Concern`** はこのパターンを簡潔に書ける糖衣構文:\n```ruby\nmodule M\n  extend ActiveSupport::Concern\n\n  included do\n    # クラス本体に実行されるコード (scope, validate, etc)\n  end\n\n  class_methods do\n    def class_m; end\n  end\n\n  # インスタンスメソッドは通常通り\n  def instance_m; end\nend\n```\n\n**まとめ**:\n- インスタンスメソッドを共有 → `include`\n- クラスメソッドを共有 → `extend` または `ClassMethods` パターン\n- Rails なら `ActiveSupport::Concern` で簡潔に",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は『no method / from M』。`def self.hello` は M モジュール自身の特異メソッドで、`include M` はインスタンスメソッドだけを取り込むため `A.hello` は呼べない (NoMethodError → rescue で 'no method')。一方 `M.hello` は M に直接定義されているので呼べる。",
+        reason:
+          "Ruby の Module はインスタンスメソッド (include で取り込まれる) と特異メソッド (モジュール自身に紐づく、include されない) を分離している。これは『モジュール自身がツールとして提供するメソッド』と『include 先のクラスに振る舞いを追加するメソッド』を区別するため。クラスメソッドとして共有したければ `extend M` か `ClassMethods` パターン (Rails の ActiveSupport::Concern で簡潔化) を使う。",
+        example:
+          "Rails の Concern で `included do ... end` でクラス本体に scope を追加、`class_methods do ... end` でクラスメソッドを定義、通常のメソッド定義でインスタンスメソッドを追加。Devise / Pundit / Searchkick などの gem も内部で同じパターンを使っている。",
+        pitfall:
+          "Module を初めて作る人が反射的に `def self.foo` を書きがちだが、include で取り込まれないので使い方を理解しないとハマる。クラスメソッドとインスタンスメソッドの両方を提供したいなら ClassMethods パターン or ActiveSupport::Concern が定型。`extend self` で Module 内のインスタンスメソッドを特異メソッド扱いにする手も。",
+      },
       codeExample:
         'module M\n  def self.singleton_m; "singleton"; end   # M.singleton_m のみ可\n  def instance_m; "instance"; end           # include 先で呼べる\nend\n\nclass A\n  include M\nend\n\nA.singleton_m       # NoMethodError\nA.new.instance_m    # "instance"\n\n# クラスメソッドも取り込みたい Rails パターン\nmodule M\n  def instance_m; end\n  module ClassMethods\n    def class_m; end\n  end\n  def self.included(base)\n    base.extend(ClassMethods)\n  end\nend',
+      commonMistakes: [
+        "Module に `def self.foo` を書いて include しても、include 先で foo は呼べない。extend か ClassMethods パターンを使う。",
+        "Rails では ActiveSupport::Concern を使うと ClassMethods パターンが 1 行で書ける。",
+      ],
+      references: [
+        {
+          label: "Rails API: ActiveSupport::Concern",
+          url: "https://api.rubyonrails.org/classes/ActiveSupport/Concern.html",
+        },
+      ],
     },
   },
   {
@@ -2808,6 +2911,12 @@ export const questions: Question[] = [
       "変数を一切捕捉しない",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。クロージャは『関数 + 環境』で、定義時のレキシカルスコープにある変数を捕捉して持ち運ぶ。Counter / Memoize / イベントハンドラなど多くの場面で活用。",
+      "クロージャの本質は『定義時の環境を捕捉して持ち運ぶ』。実行時にしか変数を見ないと、定義時の状態を保持できずクロージャの意味がない。",
+      "ローカル変数・引数・周囲のすべての変数を捕捉できる。グローバル変数限定ではない。",
+      "クロージャの本質が捕捉すること。捕捉しないなら『普通の関数』であってクロージャではない。",
+    ],
     hints: [
       "クロージャ = 関数 + 環境。",
       "lambda 定義時に見えていた変数を覚えている。",
@@ -2818,8 +2927,30 @@ export const questions: Question[] = [
         "クロージャは定義時のレキシカルスコープを捕捉して持ち運ぶ。",
       reason:
         "lambda/proc は定義された場所の外側変数を覚え、後で実行しても見える。React の useCallback で hook の値を閉じ込めるのと同じ概念。これによりカウンタなどの状態を関数で表現できる。",
+      beginnerExplanation:
+        "**クロージャ (closure)** は **『関数 + その関数が定義された環境 (周囲の変数)』** がワンセットになったものです。\n\n**典型例 (カウンタ)**:\n```ruby\ndef make_counter\n  count = 0\n  -> { count += 1 }     # ← lambda が外側の count を捕捉\nend\n\nc = make_counter\nc.call   # => 1\nc.call   # => 2\nc.call   # => 3\n```\n\n**何が起きてる?**\n- `make_counter` が呼ばれると `count = 0` のローカル変数ができる\n- `-> { count += 1 }` の lambda はこの count を **捕捉** する\n- `make_counter` が return しても、lambda がある限り count は生き続ける\n- `c.call` のたびに同じ count をインクリメント\n\n**もう 1 つの例 (Memoize)**:\n```ruby\ndef memoize(fn)\n  cache = {}\n  ->(x) { cache[x] ||= fn.call(x) }\nend\n\nslow_square = ->(n) { sleep(1); n * n }\nfast_square = memoize(slow_square)\n\nfast_square.call(5)   # 1秒待って 25\nfast_square.call(5)   # 即座に 25 (キャッシュ)\n```\n\n**Block / Proc / Lambda 全てクロージャ**:\n```ruby\nname = 'world'\nblock = { puts name }       # name を捕捉\n[1].each { puts name }       # 同じく\nlambda { puts name }          # 同じく\n```\n\n**def はクロージャを作らない**:\n```ruby\nname = 'world'\ndef greet\n  name                       # NameError (def はスコープを切る)\nend\n```\n→ def を使うと外側変数が見えない (新しいスコープが作られる)。クロージャが必要なら define_method か lambda / proc を使う。\n\n**実用例**:\n- Counter (上記)\n- Memoize (上記)\n- イベントハンドラの状態保持\n- Rails の scope (`scope :recent, -> { where(...) }` も lambda クロージャ)\n- DSL の状態保持",
+      modelSelfExplanation: {
+        conclusion:
+          "クロージャ (lambda / proc / block) の最大の特徴は『定義時のレキシカルスコープにある変数を捕捉して持ち運ぶ』こと。これにより関数を返した後でも外側のローカル変数を内側から参照・更新でき、Counter / Memoize / イベントハンドラなどの状態保持パターンが実現できる。",
+        reason:
+          "クロージャは関数型プログラミングの基本概念で、『関数 + 環境』のセット。Ruby では block / Proc / Lambda がすべてクロージャとして動き、定義時のスコープを記憶する。これにより外側のローカル変数を内側から書き換えられ、状態をオブジェクトに頼らず関数のみで表現できる。`def` キーワードは新しいスコープを切るためクロージャにならず、`define_method` を使うか lambda / proc で書く必要がある。",
+        example:
+          "Rails の scope `scope :recent, -> { where('created_at > ?', 1.day.ago) }` の lambda が定義時に `1.day.ago` を捕捉、シングルトンファクトリ `make_logger = ->(prefix) { ->(msg) { puts \"#{prefix}: #{msg}\" } }` でクロージャに prefix を埋め込む、Memoize パターンで cache をクロージャに閉じ込める、コールバックパターンで context を保持、など。",
+        pitfall:
+          "クロージャが外側変数を捕捉すると、変数の寿命がクロージャの寿命と一致する (GC されない)。大量データを捕捉した lambda を長く保持するとメモリリークの原因。さらにクロージャ内で外側変数を変更すると、後から見ると不可解な挙動 (lambda の評価で副作用) を起こすので、純粋関数的に書く方が安全。",
+      },
       codeExample:
         'def make_counter\n  count = 0\n  -> { count += 1 }\nend\n\nc = make_counter\nc.call  #=> 1\nc.call  #=> 2\nc.call  #=> 3\n# count は make_counter のローカル変数だが、\n# lambda がそれを捕捉して保持し続ける',
+      commonMistakes: [
+        "def で外側変数を参照しようとして NameError。クロージャが必要なら lambda / proc / define_method。",
+        "クロージャが大きなデータを捕捉してメモリリーク。長く生きるクロージャは捕捉するものを意識する。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: ブロックと Proc / クロージャ",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Proc.html",
+        },
+      ],
     },
   },
   {
