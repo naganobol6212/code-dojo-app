@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-27-d",
+    date: "2026-05-27",
+    title: "🧩 既存トラックの問題を +43 問拡充 (累計 ~295 問へ)",
+    badge: "content",
+    highlights: [
+      "🔧 Git: 16 → 20 問 (annotated/lightweight tag、submodule vs subtree、rerere、hooks/husky)",
+      "🐧 Linux: 16 → 20 問 (jq/yq、rsync --delete、set -euo pipefail、[[ ]] vs [ ])",
+      "🛡️ InfoSec: 15 → 20 問 (HSTS preload、Argon2、Passkeys/WebAuthn、SRI、Open Redirect)",
+      "🔷 TypeScript: 20 → 30 問 (satisfies、Variadic Tuple、as const、Narrowing、Utility Types、declare global、const type parameter、Branded types、Exhaustiveness、Template Literal Type 応用)",
+      "⚛️ React: 20 → 30 問 (StrictMode、useTransition、useId、useSyncExternalStore、createPortal、Fragment key、Hydration エラー対策、Error Boundary、useDebugValue、React Compiler)",
+      "🐍 Python: 20 → 30 問 (match/case、walrus :=、3.10+ T | None、@contextmanager、pathlib、asyncio.gather/TaskGroup、f-string format spec、PEP 695 generic syntax、lru_cache、Counter)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-27-c",
     date: "2026-05-27",
     title: "🗂️ DB 設計トラックを追加 — 全 12 トラックに",
