@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-26-l",
+    date: "2026-05-26",
+    title: "🛡️ Study Guide に InfoSec を追加 — 全 11 トラック完走 (7 章)",
+    badge: "content",
+    highlights: [
+      "🛡️ Web セキュリティの地図 — OWASP Top 10 と Rails の防御 (新規ガイド、7 章 / 約 60 分)",
+      "1. OWASP Top 10 と多層防御 / 2. Injection (SQL/コマンド/NoSQL) / 3. XSS と CSP / 4. CSRF とセッション/Cookie / 5. 認証と認可 (bcrypt/Pundit/JWT alg confusion) / 6. シークレット管理と HTTPS/HSTS/SSRF / 7. レート制限/ファイルUP/依存監査",
+      "Rails 中心だが OWASP / CSP / JWT / SSRF / SRI など Web 共通の知識を体系化",
+      "Pundit ポリシー / rack-attack / bundle audit / Dependabot / filter_parameters / lograge / audited まで実務で使うエコシステム一式",
+      "sec-001 〜 sec-015 の全 15 問と相互リンク",
+      "🎉 これで Ruby/JS/TS/Python/SQL/React/Next.js/Nuxt/Git/Linux/InfoSec の **全 11 トラックの Study Guide が揃った** (Guide 総数: 10 → 11、章総数: 70 → 77)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-26-k",
     date: "2026-05-26",
     title: "🐧 Study Guide に Linux & CLI を追加 (7 章)",
