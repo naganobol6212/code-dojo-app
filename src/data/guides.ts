@@ -15,6 +15,10 @@ export type GuideSection = {
   language?: string;
   /** よくある落とし穴・補足 */
   notes?: string[];
+  /** オプションの Mermaid 図 (flowchart / sequence / classDiagram など) */
+  diagram?: string;
+  /** 図のキャプション (図のすぐ下に表示) */
+  diagramCaption?: string;
 };
 
 export type GuideChapter = {
@@ -1889,6 +1893,28 @@ export const guides: Guide[] = [
             body: "`A LEFT JOIN B ON 条件` で A 側は必ず残し、B 側が無ければ NULL で埋める。『投稿が 0 件の user も含めて一覧したい』『parent も子も両方一覧したい』などで頻出。",
             code: "-- 全 user (投稿 0 件の人も含む)\nSELECT u.id, u.name, p.title\nFROM users u\nLEFT JOIN posts p ON u.id = p.user_id;\n-- 投稿が無い user は p.title が NULL\n\n-- 投稿数 0 を含むカウント (COALESCE で 0 に揃える)\nSELECT u.id, u.name, COUNT(p.id) AS post_count\nFROM users u\nLEFT JOIN posts p ON u.id = p.user_id\nGROUP BY u.id, u.name;\n-- COUNT(p.id) は NULL を数えないので、投稿 0 件の人は 0 になる ◎\n\n-- ❌ NG パターン: WHERE で右テーブル条件を書くと INNER になる\nSELECT u.id, u.name, p.title\nFROM users u\nLEFT JOIN posts p ON u.id = p.user_id\nWHERE p.published = true;          -- ← published=true の post が無い user が消える\n\n-- ✅ 正しくは ON に書く\nSELECT u.id, u.name, p.title\nFROM users u\nLEFT JOIN posts p ON u.id = p.user_id AND p.published = true;",
             language: "sql",
+            diagram: `flowchart TB
+  subgraph INNER ["INNER JOIN"]
+    direction LR
+    A1["users<br/>(投稿あり)"]:::both --- B1["posts<br/>(著者あり)"]:::both
+  end
+  subgraph LEFT ["LEFT JOIN"]
+    direction LR
+    A2["users<br/>(全員)"]:::left --- B2["posts<br/>+ NULL 補完"]:::nullable
+  end
+  subgraph RIGHT ["RIGHT JOIN"]
+    direction LR
+    A3["users<br/>+ NULL 補完"]:::nullable --- B3["posts<br/>(全件)"]:::right
+  end
+  subgraph FULL ["FULL OUTER JOIN"]
+    direction LR
+    A4["users<br/>+ NULL"]:::nullable --- B4["posts<br/>+ NULL"]:::nullable
+  end
+  classDef both fill:#fef3c7,stroke:#f59e0b
+  classDef left fill:#dbeafe,stroke:#3b82f6
+  classDef right fill:#ddd6fe,stroke:#8b5cf6
+  classDef nullable fill:#fee2e2,stroke:#ef4444,stroke-dasharray: 5 5`,
+            diagramCaption: "JOIN の 4 種類 — どちらの行を『必ず残すか』と『NULL 補完するか』の違い",
             notes: [
               "LEFT JOIN + WHERE 右側条件は『見落としやすい INNER 化』 — ON に書くのが正解",
               "RIGHT JOIN は『LEFT JOIN の逆』 — 実務では LEFT に書き換える方が読みやすい",
@@ -2491,6 +2517,26 @@ export const guides: Guide[] = [
             body: "`<Suspense fallback={<Loading />}>` で囲んだ中で『データ準備中』のコンポーネントが現れると、自動で fallback が表示される。TanStack Query (`useSuspenseQuery`)、Next.js App Router (Server Component の async)、Relay などが対応。`if (loading) return <Loading />` をコンポーネント毎に書く必要がなくなる。",
             code: "import { Suspense } from 'react'\n\n// Next.js App Router (Server Component)\nexport default function Page() {\n  return (\n    <main>\n      <h1>Posts</h1>\n      <Suspense fallback={<Skeleton />}>\n        <Posts />          {/* async Server Component、データ取得中は Skeleton */}\n      </Suspense>\n    </main>\n  )\n}\n\nasync function Posts() {\n  const posts = await db.post.findMany()\n  return <PostList items={posts} />\n}\n\n// クライアント (TanStack Query)\nimport { useSuspenseQuery } from '@tanstack/react-query'\nfunction Posts() {\n  const { data } = useSuspenseQuery({\n    queryKey: ['posts'],\n    queryFn: () => fetch('/api/posts').then(r => r.json()),\n  })\n  return <PostList items={data} />\n}",
             language: "tsx",
+            diagram: `sequenceDiagram
+  participant Browser
+  participant Server
+  participant DB
+
+  Browser->>Server: GET /dashboard
+  Server-->>Browser: HTML (shell + Skeleton 1, Skeleton 2)
+  Note over Browser: 早期 TTFB (即描画)
+  par UserStats (fast)
+    Server->>DB: SELECT stats
+    DB-->>Server: 結果 (50ms)
+    Server-->>Browser: <chunk> UserStats HTML
+    Note over Browser: Skeleton 1 → 実 UI
+  and Charts (slow)
+    Server->>DB: 複雑な集計
+    DB-->>Server: 結果 (800ms)
+    Server-->>Browser: <chunk> Charts HTML
+    Note over Browser: Skeleton 2 → 実 UI
+  end`,
+            diagramCaption: "Suspense + Streaming SSR: 全データ完了を待たず、準備できた部品から順に HTML を配信",
             notes: [
               "Suspense は『データ取得中 = まだ render できない』を React に伝える仕組み",
               "Next.js App Router では Suspense 境界ごとにストリーミング SSR (HTML を部分配信)",
@@ -2726,6 +2772,17 @@ export const guides: Guide[] = [
             body: "Next.js のキャッシュは多層 (Request Memoization / Data Cache / Full Route Cache / Router Cache)。理解しておくと挙動が読みやすい。普段は fetch のキャッシュオプションと revalidatePath/Tag だけで足りる。",
             code: "// (1) Request Memoization — 同一 render 内の同じ fetch を 1 回に dedupe\n// 同じ render tree で同じ URL を fetch しても 1 回しか飛ばない\n\n// (2) Data Cache — fetch / unstable_cache の結果、デプロイ間で永続\n// 'force-cache' / next.revalidate / next.tags で制御\n\n// (3) Full Route Cache — ビルド時 or revalidate 後の HTML をキャッシュ\n// dynamic = 'force-static' / 'force-dynamic' で挙動指定\n\n// (4) Router Cache — クライアント側、Link 遷移用の RSC ペイロードを保持\n// router.refresh() / revalidatePath() で更新\n\n// 図解 (簡易)\n// User → Router Cache (Client) → Full Route Cache → Data Cache → 外部 API/DB\n//          ↑ Link prefetch        ↑ revalidatePath   ↑ revalidateTag/fetch opts",
             language: "tsx",
+            diagram: `flowchart LR
+  U["👤 User<br/>(ブラウザ)"] --> RC["① Router Cache<br/>(Client / RSC payload)"]
+  RC --> FRC["② Full Route Cache<br/>(HTML, build or revalidate)"]
+  FRC --> DC["③ Data Cache<br/>(fetch / unstable_cache)"]
+  DC --> RM["④ Request Memoization<br/>(同一 render 内 dedupe)"]
+  RM --> EXT["外部 API / DB"]
+
+  R1["router.refresh()<br/>revalidatePath()"] -.-> RC
+  R2["revalidatePath()<br/>dynamic='force-dynamic'"] -.-> FRC
+  R3["revalidateTag()<br/>cache: 'no-store'"] -.-> DC`,
+            diagramCaption: "Next.js の 4 層キャッシュ — User からの距離が近いほどキャッシュが効くが、無効化操作の対象も増える",
             notes: [
               "ふつうは Data Cache (fetch オプション + revalidateTag) を意識すれば十分",
               "本番でキャッシュが思わぬ挙動なら、まず dynamic/revalidate を明示してみる",
@@ -3452,6 +3509,16 @@ export const guides: Guide[] = [
             body: "Git はファイルを 3 つの状態で管理する。**作業ツリー (Working Tree)**: 実際のファイル。**インデックス (Index / Staging Area)**: 次のコミットに含める変更の予約箱。**ローカルリポジトリ**: 過去のコミット履歴 (.git/)。`add` で作業ツリー → インデックス、`commit` でインデックス → リポジトリ。",
             code: "[作業ツリー] -- git add --> [インデックス] -- git commit --> [リポジトリ]\n              <- git restore <-                  <- git reset <-\n\n# 例\necho 'hello' > foo.txt           # 作業ツリーを編集\ngit add foo.txt                   # インデックスに登録\ngit commit -m 'add foo'           # リポジトリへコミット\n\n# 取消の方向\ngit restore foo.txt               # 作業ツリーを最後のコミットに戻す (危険)\ngit restore --staged foo.txt      # インデックスから外す (作業ツリーは保つ)\ngit reset --soft HEAD~1           # 最新コミットを取消 (変更はインデックスに残す)\ngit reset --hard HEAD~1           # 最新コミットを取消 + 作業ツリーも巻き戻し (危険)",
             language: "bash",
+            diagram: `flowchart LR
+  WT["作業ツリー\\n(Working Tree)"] -- "git add" --> IDX["インデックス\\n(Staging)"]
+  IDX -- "git commit" --> REPO["ローカルリポジトリ\\n(.git/)"]
+  IDX -- "git restore --staged" --> WT
+  REPO -- "git restore" --> WT
+  REPO -- "git reset --soft" --> IDX
+  REPO -- "git reset --hard" --> WT
+  REPO -- "git push" --> REMOTE["リモート\\n(origin)"]
+  REMOTE -- "git fetch / pull" --> REPO`,
+            diagramCaption: "Git の 3 エリアと主要コマンドの流れ",
             notes: [
               "コミットは git の最小単位 (snapshot + parent + author + message)",
               ".git/ ディレクトリにすべての履歴が保存されている — リポジトリそのもの",
@@ -3512,6 +3579,17 @@ export const guides: Guide[] = [
             body: "`git merge feature` で『現在のブランチ』に feature を取り込む。先に進んでいなければ **fast-forward** (新コミットなし、ポインタを動かすだけ)、両方が分岐していれば **merge commit** が作られる (2 親の特別なコミット)。`--no-ff` で意図的に merge commit を残す流派もある。",
             code: "git switch main\ngit merge feature                   # 取り込み\n# Fast-forward → main のポインタが feature の先端へ移動 (新コミットなし)\n\n# 分岐している場合は merge commit が作られる\n# main:    A -- B -- C\n# feature:      \\\n#                D -- E\n# merge 後:\n# main:    A -- B -- C --------- M (parents: C, E)\n#                \\              /\n#                 D -- E -------\n\n# --no-ff で必ず merge commit を残す (PR の塊が見える)\ngit merge --no-ff feature\n\n# --squash で『1 コミットに圧縮』して取り込む (履歴がリニア + feature の細かい履歴は消える)\ngit merge --squash feature\ngit commit -m 'feat: login flow'\n\n# やめる\ngit merge --abort",
             language: "bash",
+            diagram: `gitGraph
+  commit id: "A"
+  commit id: "B"
+  branch feature
+  checkout feature
+  commit id: "D"
+  commit id: "E"
+  checkout main
+  commit id: "C"
+  merge feature id: "M"`,
+            diagramCaption: "merge commit (M) によって両方の履歴が保持される",
             notes: [
               "--ff-only でつけると fast-forward 可能でなければエラーにできる (履歴が綺麗な状態を強制)",
               "GitHub の『Merge pull request』『Squash and merge』『Rebase and merge』は内部的にこれらを実行",
@@ -3522,6 +3600,15 @@ export const guides: Guide[] = [
             body: "`git rebase main` は『自分のコミットを main の先端に積み直す』。履歴がリニアになり、merge commit が無くなる。**共有ブランチに対する rebase は禁忌** (履歴が書き換わるので、他人が pull したものと整合性が壊れる)。個人 feature ブランチで使うのが鉄則。",
             code: "git switch feature\ngit rebase main                     # feature の commit を main の先端に積み直し\n\n# 図解\n# main:    A -- B -- C\n# feature:      \\\n#                D -- E\n# rebase 後:\n# main:    A -- B -- C\n# feature:           \\\n#                     D' -- E'    (新しい SHA、内容は同じ)\n\n# コンフリクト発生時\n# (1) ファイル編集で <<<<< ======= >>>>> を解決\n# (2) git add <file>\n# (3) git rebase --continue\ngit rebase --abort                  # やめる\ngit rebase --skip                   # この commit を捨てる\n\n# 上流ブランチに追随する一般的な流れ\ngit switch feature\ngit fetch origin\ngit rebase origin/main              # 最新の main を取り込んで feature を更新\ngit push --force-with-lease         # 個人ブランチなら OK",
             language: "bash",
+            diagram: `gitGraph
+  commit id: "A"
+  commit id: "B"
+  commit id: "C"
+  branch feature
+  checkout feature
+  commit id: "D'"
+  commit id: "E'"`,
+            diagramCaption: "rebase 後: feature の commit は main の先端に新 SHA で積み直され、merge commit なしのリニア履歴に",
             notes: [
               "force push は --force でなく --force-with-lease を使う — 他人の commit を上書きしない",
               "PR レビュー中の feature ブランチで rebase + force-with-lease する流派は一般的",
@@ -4059,6 +4146,14 @@ export const guides: Guide[] = [
             body: "各プロセスは 3 つの『ストリーム』を持つ: **stdin (0)** 入力、**stdout (1)** 通常出力、**stderr (2)** エラー出力。リダイレクトでファイルに / から流せる。`>` 上書き、`>>` 追記、`<` 入力、`2>` stderr、`&>` 両方、`2>&1` stderr を stdout に統合。",
             code: "# 出力をファイルへ\ncmd > out.txt                          # stdout を out.txt に上書き\ncmd >> out.txt                         # 追記\n\n# 入力をファイルから\nsort < unsorted.txt\n\n# stderr のリダイレクト\ncmd 2> errors.log                      # stderr のみ\ncmd 2>> errors.log                     # 追記\ncmd 2>/dev/null                         # 捨てる (find で error を抑制する定番)\n\n# 両方\ncmd &> all.log                          # stdout + stderr (Bash 拡張)\ncmd > all.log 2>&1                     # 同上 (POSIX)\ncmd 2>&1 | grep ERROR                  # stderr も pipe で grep に流す\n\n# 入出力同時\ncmd < input.txt > output.txt 2> errors.log\n\n# ヒアドキュメント / ヒア文字列\ncat <<EOF > config.txt\nname = Alice\nage = 30\nEOF\n\ngrep foo <<< 'foo bar baz'             # ヒア文字列 (1 行入力)\n\n# /dev/null と /dev/stdin /dev/stdout\ncmd > /dev/null 2>&1                   # 全部捨てる\necho 'data' | jq < /dev/stdin",
             language: "bash",
+            diagram: `flowchart LR
+  IN["入力ファイル"] -- "&lt;" --> P["プロセス\\n(cmd)"]
+  P -- "stdout (1)" --> OUT["out.txt\\n&gt; or &gt;&gt;"]
+  P -- "stderr (2)" --> ERR["errors.log\\n2&gt; or 2&gt;&gt;"]
+  P -- "stdout | pipe" --> NEXT["次のコマンド\\n(grep/sort/...)"]
+  P -. "2&gt;&amp;1" .-> OUT
+  P -. "2&gt;/dev/null" .-> NULL[("/dev/null")]`,
+            diagramCaption: "stdin (0) / stdout (1) / stderr (2) とリダイレクト先",
             notes: [
               "`>` 上書きの事故防止: `set -o noclobber` で既存ファイルへの `>` をエラーに (`>|` で強制上書き)",
               "2>&1 の順序が大事: `cmd 2>&1 | less` (statement 内、2>&1 を pipe より先に)",
@@ -4502,6 +4597,18 @@ export const guides: Guide[] = [
             body: "ユーザーが Bank にログイン中、攻撃者のサイトを開くと `<form action='https://bank.com/transfer' method='POST'><input name='to' value='attacker'>` が自動 submit される。ブラウザは Bank のセッション Cookie を勝手に付けて送るので、Bank サーバから見ると本人のリクエスト。**authenticity_token** で『このフォームは自サイトから』を証明する。",
             code: "# ApplicationController (Rails 5+ デフォルト)\nclass ApplicationController < ActionController::Base\n  protect_from_forgery with: :exception\n  # invalid token → raise ActionController::InvalidAuthenticityToken\nend\n\n# form_with は自動で hidden 埋め込み\n<%= form_with model: @user do |f| %>\n  <!-- <input type=\"hidden\" name=\"authenticity_token\" value=\"...\"> が自動挿入 -->\n  <%= f.text_field :name %>\n<% end %>\n\n# JSON API でフロントが Rails の view から来ない場合\n# → meta タグから取り出してヘッダで送る\n<%= csrf_meta_tags %>\n# <meta name=\"csrf-token\" content=\"...\">\n\n# Client JS\nconst token = document.querySelector('meta[name=\"csrf-token\"]').content\nfetch('/api/x', {\n  method: 'POST',\n  headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ ... })\n})\n\n# 純粋な API (ActionController::API) では protect_from_forgery が不要\n# Bearer token (JWT) や session を使わない場合は CSRF が原理的に発生しない\nclass Api::BaseController < ActionController::API\n  # protect_from_forgery が無くて OK (session を使わないので)\nend",
             language: "ruby",
+            diagram: `sequenceDiagram
+  participant User as 被害者ブラウザ
+  participant Evil as 攻撃者サイト<br/>(evil.com)
+  participant Bank as bank.com
+
+  User->>Bank: ログイン (session_id Cookie 取得)
+  User->>Evil: 不審サイトを訪問
+  Evil-->>User: 自動 POST フォーム (bank.com/transfer)
+  User->>Bank: POST /transfer + Cookie 自動添付
+  Note over Bank: ❌ Token 無し → 401/403
+  Bank-->>User: protect_from_forgery で拒否`,
+            diagramCaption: "CSRF: ブラウザは Cookie を自動添付するが、authenticity_token が無いと Rails が拒否する",
             notes: [
               "GET は副作用なしなので CSRF 対象外 (HTTP の決まり) — 副作用のある GET を作らない",
               "SameSite=Lax (Cookie) があれば多くの CSRF が自動で防がれる (4.2)",
@@ -4635,6 +4742,18 @@ export const guides: Guide[] = [
             body: "**SSRF**: ユーザーが指定した URL をサーバが fetch する機能で、内部 IP (169.254.169.254 の AWS metadata, 127.0.0.1, 10.0.0.0/8 など) を叩かれる攻撃。クラウド metadata 経由で IAM 認証情報まで盗まれる事例も。**URL allowlist + 内部 IP block** が必須。",
             code: "# ❌ 危険 — ユーザー指定 URL をそのまま fetch\ndef preview\n  uri = URI(params[:url])\n  response = Net::HTTP.get(uri)\n  render plain: response\nend\n\n# 攻撃: params[:url] = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'\n# → AWS の IAM 認証情報が漏洩\n\n# ✅ 対策 1: ホスト名 allowlist\nALLOWED_HOSTS = %w[example.com api.example.com]\nuri = URI(params[:url])\nraise 'Forbidden' unless ALLOWED_HOSTS.include?(uri.host)\n\n# ✅ 対策 2: 内部 IP の解決を block\nrequire 'resolv'\nrequire 'ipaddr'\n\nFORBIDDEN_RANGES = [\n  IPAddr.new('127.0.0.0/8'),\n  IPAddr.new('10.0.0.0/8'),\n  IPAddr.new('172.16.0.0/12'),\n  IPAddr.new('192.168.0.0/16'),\n  IPAddr.new('169.254.0.0/16'),         # link-local (AWS metadata)\n  IPAddr.new('::1/128'),\n  IPAddr.new('fc00::/7'),                # IPv6 ULA\n]\n\ndef safe_url?(url)\n  uri = URI(url)\n  return false unless %w[http https].include?(uri.scheme)\n  addrs = Resolv.getaddresses(uri.host)\n  addrs.any? && addrs.none? do |addr|\n    ip = IPAddr.new(addr)\n    FORBIDDEN_RANGES.any? { |r| r.include?(ip) }\n  end\nend\n\n# ✅ 対策 3: IMDSv2 を強制 (AWS の場合)\n# EC2 Instance Metadata Service v2 はトークン必須なので SSRF で叩きにくい\n\n# オープンリダイレクトも要注意\n# ❌ redirect_to params[:next]\n# 攻撃者が ?next=https://evil.com を仕込む → フィッシング助長\n# ✅ allowlist or 相対 URL のみ許可\nredirect_to(params[:next].start_with?('/') ? params[:next] : root_path)",
             language: "ruby",
+            diagram: `sequenceDiagram
+  participant Attacker as 攻撃者
+  participant App as アプリサーバ<br/>(EC2 内部)
+  participant Meta as 169.254.169.254<br/>(AWS metadata)
+
+  Attacker->>App: POST /preview { url: "http://169.254.169.254/..." }
+  Note over App: ❌ 検証なし<br/>fetch をそのまま実行
+  App->>Meta: GET /latest/meta-data/iam/...
+  Meta-->>App: IAM 認証情報
+  App-->>Attacker: 認証情報が漏洩 🔥
+  Note over App,Meta: ✅ 対策: ホスト allowlist + 内部 IP block + IMDSv2 強制`,
+            diagramCaption: "SSRF: ユーザー入力 URL を検証せず fetch すると、サーバ内部からのみアクセス可能なリソースへ攻撃が伸びる",
             notes: [
               "AWS EC2 では IMDSv2 を強制すると SSRF からの metadata 流出が大幅に減る",
               "URL 経由の処理 (Webhook / OG 取得 / SSO redirect) は SSRF と Open Redirect の両方をレビュー",

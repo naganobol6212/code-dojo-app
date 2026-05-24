@@ -4,6 +4,7 @@ import { findGuide, guides } from "@/data/guides";
 import { findQuestion } from "@/data/all-questions";
 import { findCategory } from "@/data/categories";
 import { SampleCodeBlock } from "@/components/SampleCodeBlock";
+import { MermaidDiagram } from "@/components/MermaidDiagram";
 
 export function generateStaticParams() {
   return guides.flatMap((g) =>
@@ -105,6 +106,9 @@ export default async function ChapterPage({ params }: Props) {
                   language={s.language ?? "code"}
                 />
               </div>
+            )}
+            {s.diagram && (
+              <MermaidDiagram source={s.diagram} caption={s.diagramCaption} />
             )}
             {s.notes && s.notes.length > 0 && (
               <ul className="mt-4 space-y-1.5 rounded-xl border border-amber-200/60 bg-amber-50/40 p-4 text-sm text-zinc-700 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-zinc-200">
