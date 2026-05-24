@@ -983,6 +983,12 @@ export const questions: Question[] = [
     code: "[1, 2, 3].map { |n| n * 2 }",
     choices: ["[1, 2, 3]", "[2, 4, 6]", "6", "[1, 4, 9]"],
     answerIndex: 1,
+    choiceExplanations: [
+      "元の配列は変更されない (非破壊的) が、戻り値は別物。`map!` を呼ばないと元のままに見えるだけ。",
+      "正解。`map` は各要素にブロックを適用した結果の新しい配列を返す。`[1*2, 2*2, 3*2]` = `[2, 4, 6]`。",
+      "合計値 6 を求めるなら `sum` か `reduce`。`map` は要素数を保つ。",
+      "二乗するなら `n ** 2`。設問のブロックは `n * 2` (2 倍)。",
+    ],
     hints: [
       "`map` は配列の各要素を変換した新しい配列を返します。",
       "ブロック `{ |n| n * 2 }` は各要素を 2 倍にします。",
@@ -992,10 +998,29 @@ export const questions: Question[] = [
       summary: "`map` は要素変換用。新しい配列を返す。",
       reason:
         "`Enumerable#map` (別名 `collect`) は各要素にブロックを適用した結果の配列を返します。元の配列は変更されません (`map!` は破壊版)。関数型プログラミングでお馴染みの操作。",
+      beginnerExplanation:
+        "**`map`** は **『各要素を別の値に変換して新しい配列を作る』** メソッドです。Ruby のコレクション操作の超基本。\n\n**動作**:\n```ruby\n[1, 2, 3].map { |n| n * 2 }\n# 1 → 2\n# 2 → 4\n# 3 → 6\n# 結果: [2, 4, 6]\n```\n\n各要素にブロックが適用され、ブロックの戻り値が新しい配列の要素になる。**要素数は変わらない**。\n\n**`Symbol#to_proc` で短縮**:\n```ruby\n[1, 2, 3].map(&:to_s)   # → ['1', '2', '3']\n[1, 2, 3].map(&:succ)   # → [2, 3, 4]\n```\n`&:foo` は `{ |x| x.foo }` の糖衣構文。\n\n**with_index で添字付き**:\n```ruby\n[1, 2, 3].map.with_index { |n, i| \"#{i}: #{n}\" }\n# → ['0: 1', '1: 2', '2: 3']\n```\n\n**Hash の場合**: Hash#map は配列を返す (Hash にしたいなら `transform_values` か `to_h`)\n```ruby\n{ a: 1, b: 2 }.map { |k, v| [k, v * 2] }\n# → [[:a, 2], [:b, 4]]  ← 配列!\n\n{ a: 1, b: 2 }.transform_values { |v| v * 2 }\n# → {a: 2, b: 4}  ← Hash のまま\n```\n\n**仲間メソッド**:\n- `map` (= `collect`) — 各要素を変換\n- `select` (= `filter`) — 条件で絞り込み\n- `reject` — 条件を反転して絞り込み\n- `reduce` (= `inject`) — 畳み込み\n- `each` — 戻り値なし (副作用だけ)\n\n**Tip**: `map` は **元の配列を変更しない**。変更したいなら `map!` (破壊版) だが、可読性が落ちるので推奨されない。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は `[2, 4, 6]`。`Array#map` は各要素にブロックを適用した結果の新しい配列を返すメソッドで、`[1, 2, 3]` の各要素に `n * 2` を適用すると `[2, 4, 6]` になる。",
+        reason:
+          "`map` (別名 `collect`) は Enumerable モジュールが提供する代表的な変換メソッドで、関数型プログラミングの map と同じ概念。各要素にブロックを適用してその戻り値を新配列に集める。元の配列は変更せず新しい配列を返す (非破壊的)。要素数は元と同じで、変換のみが行われる。これにより『データを変換するパイプライン』を `.map` 連鎖で宣言的に書ける。",
+        example:
+          "ユーザの一覧から名前だけ取り出す `users.map(&:name)`、商品リストから価格に消費税を加える `products.map { |p| p.price * 1.1 }`、CSV の行を配列の配列に変換 `lines.map { |l| l.split(',') }`、ID リストを Hash 化 `ids.map { |id| [id, fetch_data(id)] }.to_h` など、現場で 1 日に何回も書く頻出メソッド。",
+        pitfall:
+          "Hash に対する map は配列を返すので、Hash のまま値変換したければ `transform_values` を使う。`map` の中で副作用 (DB 更新など) を書くと意図しない結果になるので、副作用なら `each` を使う。大量データに対する map は全件メモリにロードするので、ストリーム処理が必要なら `lazy.map` で Enumerator::Lazy にする。",
+      },
       codeExample:
         "[1, 2, 3].map { |n| n * 2 }       #=> [2, 4, 6]\n[1, 2, 3].map(&:to_s)             #=> [\"1\", \"2\", \"3\"]\n[1, 2, 3].map.with_index { |n, i| \"#{i}: #{n}\" }\n#=> [\"0: 1\", \"1: 2\", \"2: 3\"]\n\n# Hash も map できる\n{ a: 1, b: 2 }.map { |k, v| [k, v * 2] }\n#=> [[:a, 2], [:b, 4]]  (配列が返る点に注意)\n{ a: 1, b: 2 }.transform_values { |v| v * 2 }\n#=> {a: 2, b: 4}",
       commonMistakes: [
         "Hash#map は配列を返す。Hash のまま返したいなら `transform_values` / `transform_keys` / `to_h` を使う。",
+        "副作用を map で書くと混乱の元。副作用は each、変換は map。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerable#map",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/map.html",
+        },
       ],
     },
   },
@@ -1009,6 +1034,12 @@ export const questions: Question[] = [
     code: "h = { a: 1 }\nh.???(:b, 99)",
     choices: ["[]", "dig", "fetch", "find"],
     answerIndex: 2,
+    choiceExplanations: [
+      "`h[:b]` (= `h.[]` メソッド) は無いキーで nil を返すだけ。デフォルト値は渡せない。",
+      "`dig` は **ネストした Hash** を安全に辿るメソッド (`h.dig(:user, :name)`)。デフォルト値の指定は無く、見つからなければ nil。",
+      "正解。`Hash#fetch(key, default)` は key があれば値を、無ければ default を返す。`fetch(key)` (引数 1 つ) なら KeyError 例外で早期失敗もできる多機能 API。",
+      "`find` (= `detect`) は Enumerable のメソッドで、ブロックが true を返した最初の要素を取得する別物。Hash#fetch とは無関係。",
+    ],
     hints: [
       "`h[:b]` だと nil が返ります。",
       "第2引数にデフォルト値を取れるメソッドです。",
@@ -1018,10 +1049,29 @@ export const questions: Question[] = [
       summary: "`Hash#fetch(key, default)` はキーが無いとき default を返す。",
       reason:
         "`[]` でアクセスすると無いキーは黙って nil。`fetch` はデフォルト不在なら KeyError を投げてくれるので「あるはずのキーが無い」バグを早期発見できます。設定値の読み込みに最適。",
+      beginnerExplanation:
+        "**`Hash#fetch`** は **3 つの挙動を使い分けられる** 多機能 API です。\n\n**3 つの呼び方**:\n```ruby\nh = { a: 1 }\n\nh.fetch(:a)          # => 1     (存在 → 値)\nh.fetch(:b)          # => KeyError 例外  ← 早期失敗\nh.fetch(:b, 99)      # => 99    (デフォルト値)\nh.fetch(:b) { |k| \"missing #{k}\" }   # => 'missing b' (ブロック)\n```\n\n**`[]` との違い**:\n```ruby\nh[:b]                # => nil   (黙って nil)\nh.fetch(:b)          # => KeyError (即座にエラー)\n```\n\n**使い分け**:\n- **設定値・必須項目** → `fetch(key)` (無いとバグの兆候、即落としたい)\n- **任意項目** → `fetch(key, default)` (フォールバック値あり)\n- **重い計算のデフォルト** → `fetch(key) { compute_default }` (必要な時だけ計算)\n- **本当に nil で良い** → `[]`\n\n**実例**:\n```ruby\n# ❌ typo に気付けない\nconfig[:databse_url]    # nil → 後で謎の接続エラー\n\n# ✅ 早期失敗\nconfig.fetch(:database_url)  # KeyError でその場でクラッシュ\n```\n\n**ネストアクセスは `dig`**:\n```ruby\nh = { user: { name: 'Alice' } }\nh.dig(:user, :name)   # => 'Alice'\nh.dig(:user, :age)    # => nil (途中で無くても安全)\nh.dig(:user, :prefs, :theme)  # → nil (3 段でも OK)\n```\n\n**Array にも fetch がある**:\n```ruby\n[1,2,3].fetch(10)        # IndexError\n[1,2,3].fetch(10, 99)    # 99\n```\n\n**重要原則**: 『nil が返るより例外で早期失敗の方がデバッグしやすい』。設定や外部入力では `fetch` を多用するのが堅牢。",
+      modelSelfExplanation: {
+        conclusion:
+          "正解は `fetch`。`Hash#fetch(key, default)` はキーが無いときデフォルト値を返し、引数 1 つなら KeyError 例外を投げて早期失敗を実現する多機能 API。",
+        reason:
+          "`h[:key]` は無いキーを nil で返すため『typo に気付けず後続処理で謎エラー』のパターンが起きやすい。fetch はデフォルト値・ブロック・例外の 3 通りを 1 メソッドで提供し、用途に応じて『必須なら例外』『任意ならデフォルト』を選べる。これにより『設定値の読み忘れ』『外部入力のキー不整合』のような Fail Fast が必要な場面でバグを早期発見できる。設定オブジェクト / 環境変数 / API レスポンスの取り出しで頻出。",
+        example:
+          "Rails の credentials で `Rails.application.credentials.fetch(:stripe_key)` で必須シークレットを早期検知、ENV で `ENV.fetch('DATABASE_URL')` で本番起動時に環境変数欠落を検出、API レスポンス処理で `response.fetch('items', [])` で項目が無い場合の空配列フォールバック、デフォルト計算が重い場面で `cache.fetch(:expensive_data) { compute! }` のブロック形態でメモ化、など。",
+        pitfall:
+          "`fetch(key) { ... }` のブロック形態は『デフォルトが必要なときだけ評価される』ので、重い計算 (DB クエリ、API 呼び出し) を含む場合は引数版より圧倒的に効率的。逆に小さなリテラル値なら引数版で十分。さらに `Hash` 自体に `default` / `default_proc` を設定する古い API もあるが、可読性が落ちるので原則使わない。",
+      },
       codeExample:
         'h = { a: 1 }\nh[:b]              #=> nil\nh.fetch(:b, 99)    #=> 99\nh.fetch(:b)        #=> KeyError\nh.fetch(:b) { |k| "missing #{k}" }  #=> "missing b"\n\n# ネスト Hash のアクセスは dig\nh = { user: { name: "Alice" } }\nh.dig(:user, :name)   #=> "Alice"\nh.dig(:user, :age)    #=> nil (途中で無くても安全)',
       commonMistakes: [
         '設定読み込みで `config["key"]` を多用すると typo で nil が伝播する。`fetch` で早期失敗が安全。',
+        "重いデフォルト計算は `fetch(key, expensive!)` ではなく `fetch(key) { expensive! }` で遅延評価。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Hash#fetch",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Hash/i/fetch.html",
+        },
       ],
     },
   },
@@ -1039,6 +1089,12 @@ export const questions: Question[] = [
       "[1, 2, 3, 4].each { |n| n.even? }",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。Ruby 2.6+ で `filter` は `select` のエイリアスとして追加された。挙動も結果も完全に同じ。",
+      "`reject` は条件に合わない要素を残す逆の動作。select の結果 `[2, 4]` に対し reject は `[1, 3]` を返す。",
+      "`map` は変換で、ブロックの戻り値の配列を返す。`[true, false, true, false]` のような真偽値配列になり、要素絞り込みとは別物。",
+      "`each` は副作用用で、戻り値は元の配列。条件評価しても元配列をそのまま返すので絞り込みにならない。",
+    ],
     hints: [
       "`select` は条件に合う要素だけを残します。",
       "`reject` は逆に条件に合う要素を除外します。",
@@ -1048,8 +1104,30 @@ export const questions: Question[] = [
       summary: "Ruby 2.6+ で `filter` は `select` のエイリアス。",
       reason:
         "`select` と `filter` はエイリアス関係。`reject` はその逆 (条件に合わない要素を残す)。`map` は変換、`each` は単に走査するだけで元の配列を返します。命名選びは Rails/Ruby コミュニティでは `select` 派が多いです。",
+      beginnerExplanation:
+        "**`select` と `filter` は同じもの** (Ruby 2.6+ でエイリアス追加)。他の絞り込み系メソッドと併せて整理。\n\n**`select` / `filter`** — 条件に合う要素を残す\n```ruby\n[1, 2, 3, 4].select { |n| n.even? }   # → [2, 4]\n[1, 2, 3, 4].filter { |n| n.even? }   # → [2, 4]  (同じ)\n```\n\n**`reject`** — 条件に合う要素を除外 (select の逆)\n```ruby\n[1, 2, 3, 4].reject { |n| n.even? }   # → [1, 3]\n```\n\n**`partition`** — 条件で 2 つに分ける\n```ruby\n[1, 2, 3, 4].partition { |n| n.even? }  # → [[2, 4], [1, 3]]\n```\n\n**Hash でも使える**:\n```ruby\n{ a: 1, b: 2, c: 3 }.select { |_, v| v.odd? }\n# → {a: 1, c: 3}\n```\n\n**`map` との違い** (混同しやすい):\n- `map` → 各要素を **変換** (要素数同じ、値が変わる)\n- `select` → 条件で **絞り込み** (要素数減る、値はそのまま)\n\n**実例**:\n```ruby\n# 数字だけ抽出\n['a', 1, 'b', 2].select { |x| x.is_a?(Integer) }   # → [1, 2]\n\n# 大文字始まりだけ\n['Apple', 'banana', 'Cherry'].select { |s| s.match?(/\\A[A-Z]/) }\n# → ['Apple', 'Cherry']\n\n# 連鎖\nusers.select(&:active?).map(&:name).sort\n```\n\n**コミュニティの命名選好**: Rails / Ruby コミュニティでは `select` 派が伝統的に多い。新規コードは `filter` の方が他言語経験者に馴染みやすいかも (どちらでも OK)。",
+      modelSelfExplanation: {
+        conclusion:
+          "`select` と `filter` は等価。Ruby 2.6+ で `filter` が `select` のエイリアスとして追加されており、挙動・戻り値ともに完全に同じ。条件絞り込みなら好きな方を使える。",
+        reason:
+          "Ruby は『同じ機能に複数の名前』を提供することがあり (map = collect、reduce = inject、find = detect、select = filter)、これは他言語経験者の学習コストを下げる目的で歴史的に追加されてきた。`filter` は JavaScript / Python / Swift など多くの言語で使われる名前で、これらの言語から来た人が違和感なく書けるよう Ruby 2.6 で導入された。一方コミュニティの長年の慣習で `select` 派の方が多く、既存コードベースの多くは select を使い続けている。新規プロジェクトのコーディング規約で統一しておくのが良い。",
+        example:
+          "Rails アプリで `User.all.select(&:active?)` (= filter) で AR の結果から絞り込み、`numbers.reject(&:negative?)` で負数除外、`users.partition(&:admin?)` で管理者と一般を分割、`{ a: 1, b: nil }.reject { |_, v| v.nil? }` で nil 値除外、というように select/reject/partition を組み合わせる。Hash の場合 select は Hash を返してくれるので Hash 操作にも便利。",
+        pitfall:
+          "DB 操作で `User.all.select(&:active?)` のように全件メモリにロードしてから絞り込むと N+1 や OOM の温床。可能なら `User.where(active: true)` で DB レベルで絞り込む。Enumerable#select と ActiveRecord::Relation#select は同名で挙動が違う (前者は要素絞り込み、後者は SELECT カラム指定) ので混同しないように。",
+      },
       codeExample:
         "[1,2,3,4].select { |n| n.even? }  #=> [2, 4]\n[1,2,3,4].reject { |n| n.even? }  #=> [1, 3]\n[1,2,3,4].partition { |n| n.even? } #=> [[2,4], [1,3]]\n\n# Hash も select/reject 可能\n{ a: 1, b: 2, c: 3 }.select { |_, v| v.odd? }\n#=> {a: 1, c: 3}",
+      commonMistakes: [
+        "Enumerable#select と ActiveRecord::Relation#select は別物。後者は SELECT カラム指定。",
+        "DB レコード全件を select で絞り込むのは N+1 / OOM の温床。where で DB レベルで絞る。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerable#select / filter",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/filter.html",
+        },
+      ],
     },
   },
   {
@@ -1069,8 +1147,30 @@ export const questions: Question[] = [
       summary: "`Enumerable#sum` は要素の合計を返す (Ruby 2.4+)。",
       reason:
         "古いコードでは `inject(:+)` または `reduce(:+)` と書きました。`sum` の方が読みやすく速い。初期値とブロックも渡せます。",
+      beginnerExplanation:
+        "**`sum`** は **配列要素の合計** を返す Enumerable メソッド (Ruby 2.4+)。\n\n**基本**:\n```ruby\n[1, 2, 3].sum              # => 6\n```\n\n**初期値付き**:\n```ruby\n[1, 2, 3].sum(100)         # => 106 (100 + 1 + 2 + 3)\n```\n\n**ブロック付き** (変換しながら合計):\n```ruby\n[1, 2, 3].sum { |n| n * 2 }    # => 12  (2 + 4 + 6)\n\n# 例: 文字列の長さの合計\n['hello', 'world'].sum(&:length)  # => 10\n\n# 例: ユーザの注文金額合計\norders.sum { |o| o.amount * o.tax_rate }\n```\n\n**古い書き方** (Ruby 2.4 以前):\n```ruby\n[1, 2, 3].inject(:+)           # 同じ結果\n[1, 2, 3].reduce(:+)\n```\n`sum` の方が **可読性も性能も上**。\n\n**仲間メソッド** (集計系):\n- `sum` — 合計\n- `count` / `size` — 要素数\n- `max` / `min` — 最大 / 最小\n- `minmax` — `[min, max]` のペア\n- `average` (Rails の ActiveSupport) — 平均\n\n**🚨 浮動小数の罠**:\n```ruby\n[0.1, 0.2].sum    # => 0.30000000000000004  ← 誤差!\n```\nお金の計算など正確な値が必要なら `BigDecimal` を使う:\n```ruby\nrequire 'bigdecimal/util'\n[0.1, 0.2].sum(&:to_d)  # => 0.3 (正確)\n```\n\n**空配列**:\n```ruby\n[].sum             # => 0 (デフォルト値)\n[].sum(99)         # => 99\n```\n\n**Range にも sum**:\n```ruby\n(1..100).sum       # => 5050 (高速、内部で公式使用)\n```",
+      modelSelfExplanation: {
+        conclusion:
+          "メソッド名は `sum`。`Enumerable#sum` で要素の合計を返す (Ruby 2.4+ 標準)。初期値・ブロックも渡せて、Range にも使える。",
+        reason:
+          "Ruby 2.4 以前は `inject(:+)` や `reduce(:+)` で合計を書いていたが、Ruby 2.4 で `sum` が標準追加された。`sum` は『よく使う特定演算 (加算) に専用 API を提供して可読性とパフォーマンスを上げる』設計判断で、内部最適化 (例えば Range#sum は等差数列の公式を使う高速計算) も含まれる。ブロック形態は『変換 + 合計』を 1 ステップで実行でき、`map(...).sum` よりメモリ効率が良い。",
+        example:
+          "売上集計で `orders.sum(&:total)`、文字列のバイト数合計 `strings.sum(&:bytesize)`、価格に税を掛けて合計 `items.sum { |i| (i.price * 1.1).round }`、ページネーション全件数 `paginators.sum(&:count)`、レポートで `User.active.sum(:posts_count)` (AR の sum は SQL の SUM)、など頻出。Range の sum は教育目的の数列計算でも使える。",
+        pitfall:
+          "Float の sum は IEEE 754 の誤差問題で `[0.1, 0.2].sum` が `0.30000000000000004` になる。金銭計算には `BigDecimal` を使う。さらに ActiveRecord の sum はメモリ上の Array とは別実装 (SQL の SUM をそのまま発行) なので、null を含む列で `Order.sum(:total)` を呼ぶと SQL レベルで集計してくれる (Ruby の Float 誤差は関与しない)。",
+      },
       codeExample:
         '[1,2,3].sum              #=> 6\n[1,2,3].sum(100)         #=> 106 (初期値)\n[1,2,3].sum { |n| n*2 }  #=> 12  (ブロックで変換+合計)\n\n# 浮動小数の合計は誤差に注意\n[0.1, 0.2].sum  #=> 0.30000000000000004\n# 正確に: BigDecimal を使う',
+      commonMistakes: [
+        "Float の sum は誤差が出る。金銭計算は BigDecimal。",
+        "AR の sum (SQL) と Enumerable の sum (Ruby) は別実装。混同しない。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerable#sum",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/sum.html",
+        },
+      ],
     },
   },
   {
@@ -1082,6 +1182,12 @@ export const questions: Question[] = [
     code: 'puts [1, 2, 3].inject(0) { |sum, n| sum + n }',
     choices: ["6", "10", "0", "[1, 2, 3]"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。初期値 0 に [1, 2, 3] を順に足す: 0+1=1, 1+2=3, 3+3=6。最終的に 6 が出力される。",
+      "10 になるのは初期値が 4 や 5 の場合。0 + 1 + 2 + 3 = 6 なので 10 ではない。",
+      "ブロックの戻り値 (累積結果) が最終的な戻り値。初期値 0 のままにはならない。",
+      "inject は要素を 1 つの値に畳み込むメソッドで、配列は返さない。",
+    ],
     hints: [
       "`inject(初期値) { |acc, x| ... }` は accumulator パターン。",
       "初期値 0 から始めて、各要素を加算。",
@@ -1091,8 +1197,30 @@ export const questions: Question[] = [
       summary: "`inject` (= reduce) は畳み込み操作。初期値 + 各要素の累積。",
       reason:
         "関数型でいう fold/reduce。`inject(init) { |acc, x| acc に対する操作 }` で、左から順に処理。シンボル省略形 `inject(:+)` は `inject { |a,b| a+b }` と同じ。",
+      beginnerExplanation:
+        "**`inject`** (別名 `reduce`) は **配列を 1 つの値に畳み込む** メソッドです。関数型プログラミングの fold / reduce と同じ概念。\n\n**動作イメージ**:\n```ruby\n[1, 2, 3].inject(0) { |sum, n| sum + n }\n# Step 1: sum=0, n=1 → sum + n = 1\n# Step 2: sum=1, n=2 → sum + n = 3\n# Step 3: sum=3, n=3 → sum + n = 6\n# 最終結果: 6\n```\n\n**3 つの呼び方**:\n```ruby\n# 1. 初期値あり + ブロック (一番明示的)\n[1,2,3].inject(0) { |s, n| s + n }    # => 6\n\n# 2. 初期値なし + ブロック (1 要素目を初期値に)\n[1,2,3].inject { |s, n| s + n }       # => 6\n\n# 3. Symbol 省略形 (二項演算限定で超短い)\n[1,2,3].inject(:+)                    # => 6\n[1,2,3].inject(:*)                    # => 6 (掛け算)\n```\n\n**応用例**:\n```ruby\n# 最大値 (普通は max を使う)\n[3, 1, 4].inject { |a, b| a > b ? a : b }   # => 4\n\n# Hash に集計\nwords.inject(Hash.new(0)) { |h, w| h[w] += 1; h }\n# => { 'apple' => 3, 'banana' => 1, ... }  ← 単語カウント\n\n# 連結\n[[1], [2, 3], [4]].inject([], :+)    # => [1, 2, 3, 4]\n```\n\n**`sum` との使い分け**:\n- 単純な加算 → `sum` (高速、可読性)\n- 任意の二項演算 (掛け算、Hash 構築、複雑な集計) → `inject` / `reduce`\n\n**`inject` vs `reduce`**: 完全にエイリアス。コミュニティでは『動詞として `inject` (押し込む)』『関数型用語として `reduce`』のどちらの語感を取るかで分かれる。両方覚えておけば OK。\n\n**Tip**: 累積を Hash で行うとき `Hash.new(0)` (デフォルト値 0 の Hash) と組み合わせると単語カウント・グループ集計が簡潔に書ける。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は 6。`inject(0) { |sum, n| sum + n }` は『初期値 0 から始めて各要素を加算する畳み込み』で、`0 + 1 + 2 + 3 = 6` になる。inject (= reduce) は関数型プログラミングの fold と同じ概念。",
+        reason:
+          "`inject` は『要素を 1 つの累積値に畳み込む』汎用メソッドで、ブロックの戻り値が次の呼び出しの第 1 引数 (累積値) になる。初期値を渡すと『空配列でも安全』『1 要素目の値を強制したい』場合に有効。Symbol 省略形 (`:+`, `:*` 等) は二項演算を簡潔に書ける糖衣構文。Ruby 2.4 で `sum` が追加されてからは『加算なら sum、複雑な集計なら inject』という使い分けが定着した。",
+        example:
+          "Hash の単語カウント `words.inject(Hash.new(0)) { |h, w| h[w] += 1; h }`、最大公約数 `nums.inject(:gcd)`、CSV 行を Hash 化 `rows.inject({}) { |h, row| h[row[0]] = row[1]; h }`、フラット化 `arrs.inject([], :+)` (= flatten(1))、ネスト Hash 構築 `keys.inject({}) { |h, k| h[k] = compute(k); h }`、など複雑な集計で頻出。",
+        pitfall:
+          "ブロック内で累積値を返し忘れる (`h[w] += 1` だけで return しない) と、戻り値が累積値ではなくその式の結果 (例: 1) になって挙動が崩れる。`h[w] += 1; h` のように最後に h を返す or `h.tap { |h| h[w] += 1 }` のような書き方で安全に。さらに大量データに対する inject は O(n) なので、頻繁に呼ぶならパフォーマンス測定。Symbol 省略形 (`:+`) は二項演算限定で、複雑な処理は使えない。",
+      },
       codeExample:
         "[1,2,3].inject(0) { |s, n| s + n }    #=> 6\n[1,2,3].inject(:+)                    #=> 6\n[1,2,3].inject(1) { |p, n| p * n }    #=> 6\n[1,2,3].inject(:*)                    #=> 6\n\n# 最大値\n[3,1,4].inject { |a,b| a > b ? a : b } #=> 4\n# でも普通は\n[3,1,4].max  #=> 4",
+      commonMistakes: [
+        "ブロック末尾で累積値を返し忘れる (`h[k] = v` だけだと v が返る)。`; h` で h を返す。",
+        "単純加算なら sum の方が高速・読みやすい。inject は複雑集計に。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Enumerable#inject / reduce",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/inject.html",
+        },
+      ],
     },
   },
   {

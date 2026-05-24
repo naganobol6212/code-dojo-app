@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-x",
+    date: "2026-05-24",
+    title: "Collections カテゴリの解説拡充スタート (col-001〜005)",
+    badge: "content",
+    highlights: [
+      "col-001 (map) / col-002 (Hash#fetch) / col-003 (select vs filter vs reject) / col-004 (sum) / col-005 (inject/reduce)",
+      "Ruby のコレクション操作の核となる Enumerable メソッドを実例で深掘り",
+      "進捗: 95/149 問 (64%)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-w",
     date: "2026-05-24",
     title: "🎉 Ruby OOP カテゴリ完走 — oop-011〜012 (Phase 3)",
