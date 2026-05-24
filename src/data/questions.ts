@@ -3505,6 +3505,12 @@ export const questions: Question[] = [
       "両方完全に同じ",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "両方とも同期実行。Rails で非同期にしたいなら ActiveJob (`SaveJob.perform_later`) など別の仕組みを使う。",
+      "正解。`!` 無しは失敗時にも未保存のオブジェクト (errors 付き) を返す。`!` 付きは ActiveRecord::RecordInvalid 例外を投げる。",
+      "両方とも単一レコード生成。複数生成は `create([{...}, {...}])` のように配列を渡す別パターン。",
+      "戻り値と例外の挙動が違うので完全に同じではない。",
+    ],
     hints: [
       "`!` 系は失敗で例外を投げます。",
       "create は失敗しても未保存のオブジェクトを返します (errors を持つ)。",
@@ -3515,8 +3521,30 @@ export const questions: Question[] = [
         "`!` 付きは失敗で RecordInvalid 例外、! なしは失敗時 errors を持つオブジェクトを返す。",
       reason:
         "コントローラの create アクションでは `@user = User.create(params)` → `if @user.persisted?` で分岐するが、トランザクションや Job 内では `User.create!` で例外を投げてもらわないとロールバックされない・失敗が検知されない。",
+      beginnerExplanation:
+        "`create` 系メソッドにも `!` 有無の違いがあります。**save と同じ思想** ですが、こちらは `new + save` を 1 行にまとめた『新規作成 + 即保存』の便利メソッドです。\n\n**`User.create(name: 'A')`** — 失敗しても例外を投げない\n- バリデーション失敗時、保存されない (= `persisted?` が false)\n- 戻り値は **未保存の User オブジェクト** (errors 付き)\n- 呼び出し側で `if @user.persisted?` か `@user.valid?` で分岐\n\n**`User.create!(name: 'A')`** — 失敗時に例外\n- バリデーション失敗時、`ActiveRecord::RecordInvalid` 例外\n- 成功時は保存済みの User オブジェクトを返す\n\n**使い分け**:\n```ruby\n# UI フォーム (失敗は想定内、エラー画面に戻す)\ndef create\n  @user = User.create(user_params)\n  if @user.persisted?\n    redirect_to @user\n  else\n    render :new, status: :unprocessable_entity\n  end\nend\n\n# Job / トランザクション (失敗は想定外、即例外で気付かせる)\nActiveRecord::Base.transaction do\n  user    = User.create!(name: 'A')\n  account = Account.create!(user: user)\nend  # 失敗すれば自動 ROLLBACK\n\n# seed データ / 一括投入 (失敗は致命的)\n100.times { |i| User.create!(name: \"u#{i}\") }\n```\n\n**注意**: `create` を Job やトランザクション内で使うと、失敗が静かに無視されてバグの温床になります。**システム内部の保存は必ず `!` 系** を使うのが原則です。",
+      modelSelfExplanation: {
+        conclusion:
+          "`create` はバリデーション失敗時に未保存のオブジェクト (errors 付き) を返す。`create!` は失敗時に ActiveRecord::RecordInvalid 例外を投げる。",
+        reason:
+          "ActiveRecord は『失敗は戻り値で扱う』(create / save / update) と『失敗は例外で扱う』(create! / save! / update!) を両方提供することで、ユースケースに応じた使い分けを可能にしている。UI フォームのように『失敗は想定内 (= 画面に戻す)』なら戻り値で分岐、Job やトランザクションのように『失敗は想定外 (= ロールバック)』なら例外で気付かせる。これにより呼び出し側の意図がコードから読み取れる。",
+        example:
+          "コントローラの create アクションでは `@user = User.create(user_params); if @user.persisted?; redirect_to @user; else; render :new; end` の定型。一方バックグラウンドジョブ内では `Notification.create!(user: u, body: msg)` を使い、失敗時は ActiveJob の retry 機構に乗せる。seed データやテストデータ生成では `User.create!` 一択 (失敗が静かに無視されるとデバッグ困難)。",
+        pitfall:
+          "トランザクションやバックグラウンドジョブ内で `create` (! なし) を使うと、validation 失敗が静かに無視されて『何も保存されていない』状態になり、ロールバックも発火しない。本番でデータ欠損が起きてから気付くケースが多発する。原則『システム内部の保存は ! 系』を徹底し、`create` (戻り値分岐) は『ユーザー入力を受け取るコントローラ』限定にする。",
+      },
       codeExample:
         "# UI フォーム\ndef create\n  @user = User.create(user_params)\n  if @user.persisted?\n    redirect_to @user\n  else\n    render :new, status: :unprocessable_entity\n  end\nend\n\n# Job / トランザクション内\nActiveRecord::Base.transaction do\n  user    = User.create!(name: 'A')\n  account = Account.create!(user: user)\nend  # 失敗すれば自動 ROLLBACK",
+      commonMistakes: [
+        "Job やトランザクション内で create (! なし) を使い、失敗が静かに無視される。",
+        "create の戻り値を保存成功と勘違いして次の処理に進む。`persisted?` か `valid?` で分岐する。",
+      ],
+      references: [
+        {
+          label: "Rails API: ActiveRecord::Persistence#save vs save!",
+          url: "https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html",
+        },
+      ],
     },
   },
   {
@@ -3533,6 +3561,12 @@ export const questions: Question[] = [
       "User.all の Array を返す",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`update_all` は 1 つの SQL UPDATE 文を実行し、validation / callback / タイムスタンプ自動更新もすべてスキップする高速メソッド。",
+      "save を呼ぶのは `each(&:save)` のように 1 件ずつ処理するパターン。update_all は SQL を直接打つので save は呼ばれない。",
+      "DB は変わる。むしろ DB を直接変更してアプリ側のキャッシュは古いまま、というのが落とし穴の 1 つ。",
+      "戻り値は『更新された行数 (Integer)』。配列ではない。",
+    ],
     hints: [
       "`_all` 系は『直接 SQL 実行』。",
       "コールバック・バリデーションが動きません。",
@@ -3543,10 +3577,30 @@ export const questions: Question[] = [
         "`update_all` / `delete_all` はコールバック・バリデーション・タイムスタンプを飛ばして直接 SQL。",
       reason:
         "高速バッチ処理用。`updated_at` 自動更新も走らないので、必要なら `updated_at: Time.current` を含める。`destroy_all` / `update_each` ならコールバックは走る。",
+      beginnerExplanation:
+        "**`update_all` / `delete_all`** は **ActiveRecord の通常フローを全部スキップ** して直接 SQL を発行する高速メソッドです。\n\n**スキップされるもの**:\n- ✗ バリデーション (`validates`)\n- ✗ コールバック (`before_save`, `after_update` 等)\n- ✗ `updated_at` の自動更新\n- ✗ optimistic locking (`lock_version`)\n- ✗ ActiveRecord のインスタンスメソッド\n\n**スキップされないもの**:\n- ✓ DB の制約 (NOT NULL, UNIQUE, 外部キー)\n- ✓ DB トリガー\n\n**使い分け**:\n```ruby\n# 高速 (1 クエリで終わる、コールバック飛ばす)\nUser.where(active: false).update_all(active: true, updated_at: Time.current)\n# UPDATE users SET active = true, updated_at = '...' WHERE active = false;\n\n# 1 件ずつ (N クエリ + コールバック)\nUser.where(active: false).each { |u| u.update(active: true) }\n```\n\n**いつ使う?**:\n- 大量データの一括フラグ更新 (例: 1 年以上ログインなしのユーザーを非アクティブ化)\n- マイグレーションでのデータ移行\n- パフォーマンス critical な処理\n\n**いつ使わない?**:\n- 業務ロジックを含む保存 (callback で通知メール送信などしたい場面)\n- 監査ログを残す必要がある場面 (PaperTrail などの gem は callback ベース)\n- updated_at が必要な場面 (明示的に `updated_at: Time.current` を渡せば回避可)\n\n**罠**: `update_all` 後に DB を読み返さないと、アプリのメモリ上のオブジェクトは古いまま。`@user.reload` で再読込が必要。",
+      modelSelfExplanation: {
+        conclusion:
+          "`update_all` は SQL UPDATE を直接 1 発で実行し、ActiveRecord のバリデーション・コールバック・updated_at の自動更新・optimistic locking など、通常の save 経路にあるあらゆるフックをすべてスキップする。",
+        reason:
+          "ActiveRecord の `save` 系メソッドは 1 件ずつ Ruby 側で validation → callback → SQL → callback の流れを通すため、何万件ものデータ更新では膨大なオーバーヘッドが発生する。`update_all` / `delete_all` はこの Ruby 経路を完全にバイパスして単一 SQL を発行することで、桁違いの高速化を実現する。代わりに『updated_at が更新されない』『業務ロジックが走らない』『キャッシュが古くなる』など複数の副作用があるため、用途を限定して使う必要がある。",
+        example:
+          "rake task で『1 年以上ログインなしのユーザーを非アクティブ化』なら `User.where('last_login_at < ?', 1.year.ago).update_all(active: false, updated_at: Time.current)` で 1 クエリで完了。マイグレーションで『新しく追加した published カラムを既存記事に true で埋める』なら `Post.where(published_at: ...).update_all(published: true)`。逆に『新規ユーザー登録時の welcome メール送信』など callback で副作用が必要な場面では決して update_all を使わない。",
+        pitfall:
+          "`updated_at` が自動更新されないため、UI 側のキャッシュ無効化や ETag が正しく動かなくなる。必要なら `update_all(active: true, updated_at: Time.current)` のように明示的に渡す。さらにアプリのメモリ上のオブジェクトは古いままなので、後続処理で `@user.reload` を入れないと意図しない挙動になる。validation スキップでデータ不整合 (例: NOT NULL 制約違反、NULL になり得る値) を作ってしまうケースも頻出。",
+      },
       codeExample:
         "# 高速 (コールバック飛ばす)\nUser.where(active: false).update_all(active: true, updated_at: Time.current)\nPost.where(spam: true).delete_all\n\n# 1件ずつ呼ぶ (コールバックあり)\nUser.where(active: false).each(&:destroy)\nUser.where(active: false).destroy_all\n\n# パフォーマンス比較\n# update_all:  1 クエリ\n# update each: N クエリ + コールバック",
       commonMistakes: [
         "update_all は updated_at を自動更新しない。必要なら明示的に渡す。",
+        "update_all 後にメモリ上のオブジェクトは古いまま。`@user.reload` で再読込する。",
+        "validation スキップで NULL 違反などのデータ不整合を作る。事前にデータの正当性を保証する。",
+      ],
+      references: [
+        {
+          label: "Rails API: ActiveRecord::Relation#update_all",
+          url: "https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-update_all",
+        },
       ],
     },
   },
@@ -3564,6 +3618,12 @@ export const questions: Question[] = [
       "join と include",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`has_many :through` は中間モデル (Ruby クラス) ありの書き方、`has_and_belongs_to_many` (HABTM) は中間テーブルだけで Model 不要の書き方。",
+      "`has_many :belongs` も `has_many :many` も実在しない構文。Rails の関連 DSL ではない。",
+      "`belongs_to :many` は存在しない (belongs_to は単数形のみ)。多対多の表現ではない。",
+      "`joins` / `includes` はクエリ実行時の機能で、関連定義 DSL ではない。",
+    ],
     hints: [
       "中間テーブルを使う書き方が 2 種類。",
       "`has_many :through` は中間モデルを明示。",
@@ -3574,8 +3634,30 @@ export const questions: Question[] = [
         "多対多は has_many :through (中間モデルあり) と has_and_belongs_to_many (HABTM) の 2 通り。基本は :through 推奨。",
       reason:
         "HABTM は中間テーブルのみで Model 不要なので軽量だが、中間に属性 (created_at など) を持てない。実務では拡張性のため `has_many :through` (中間 Model あり) が推奨される。",
+      beginnerExplanation:
+        "**多対多関係** (例: User と Group の関係 — 1 人のユーザーが複数のグループに所属、1 つのグループに複数のユーザーが所属) を Rails で表現する書き方は 2 つあります。\n\n**1. `has_many :through` (推奨)**\n中間モデル (Ruby クラス) を明示する書き方。\n```ruby\nclass User < ApplicationRecord\n  has_many :memberships\n  has_many :groups, through: :memberships\nend\n\nclass Membership < ApplicationRecord\n  belongs_to :user\n  belongs_to :group\n  # role や joined_at など追加カラムを持てる\nend\n\nclass Group < ApplicationRecord\n  has_many :memberships\n  has_many :users, through: :memberships\nend\n```\nテーブル: `users`, `groups`, `memberships (user_id, group_id, role, joined_at, ...)`\n\n**メリット**: 中間モデルに **追加情報** を持てる (例: メンバーシップごとの role, 加入日時)。**Membership** クラスで callback や validation も書ける。\n\n**2. `has_and_belongs_to_many` (HABTM)**\n中間テーブルだけで Model を作らない簡易書き方。\n```ruby\nclass User < ApplicationRecord\n  has_and_belongs_to_many :groups\nend\n\nclass Group < ApplicationRecord\n  has_and_belongs_to_many :users\nend\n```\nテーブル: `users`, `groups`, `groups_users (user_id, group_id)` (テーブル名は両モデル名のアルファベット順 + 複数形)\n\n**メリット**: コードが少なくて済む (中間モデル不要)。**デメリット**: 中間に属性を持てない、callback も使えない。\n\n**現代の慣習**: **常に `has_many :through` を使う** のが Rails コミュニティの共通理解。最初は追加属性が不要でも、後で必要になる確率が高いから。HABTM は legacy code でのみ見かけます。",
+      modelSelfExplanation: {
+        conclusion:
+          "多対多関係を表現する 2 つの主要な書き方は `has_many :through` (中間モデル明示) と `has_and_belongs_to_many` (HABTM、中間モデル不要)。実務では拡張性のため `has_many :through` が推奨される。",
+        reason:
+          "RDB の多対多は『中間テーブル (junction table)』で表現するのが定番だが、Rails の DSL では『中間に Ruby のモデルクラスを作るか作らないか』で 2 つの書き方が用意されている。`has_many :through` は中間モデル (例: Membership) を作るため、関連自体に属性 (role, joined_at) や validation・callback を持たせられる。`HABTM` は中間テーブルだけで Model を作らないため記述量が少ないが、関連自体には何も乗せられない。設計上、要件が変化したときに HABTM から through への移行は手間が大きいため、初手から through を採用するのが定石。",
+        example:
+          "ユーザがグループに属する SNS なら User has_many :memberships / Membership belongs_to :user, :group / Group has_many :memberships で、Membership に role (admin / member / viewer) や joined_at を持たせる。記事にタグ付けする CMS なら Post has_many :taggings / Tagging belongs_to :post, :tag / Tag has_many :taggings の構造。many-to-many は through を覚えれば 90% カバーできる。",
+        pitfall:
+          "HABTM で始めて後から中間属性が必要になると『HABTM → has_many :through への移行マイグレーション』が必要になり、データ移行と DSL 書き換えで工数がかかる。新規開発なら最初から through を選ぶ。さらに through 関連は include / preload の階層が深くなりがちなので N+1 に注意 (`Post.includes(:tags)` ではなく `Post.includes(:taggings, :tags)` のように明示が必要なケースあり)。",
+      },
       codeExample:
         "# has_many :through (推奨)\nclass User < ApplicationRecord\n  has_many :memberships\n  has_many :groups, through: :memberships\nend\n\nclass Membership < ApplicationRecord\n  belongs_to :user\n  belongs_to :group\n  # role などの追加カラムが持てる\nend\n\nclass Group < ApplicationRecord\n  has_many :memberships\n  has_many :users, through: :memberships\nend\n\n# HABTM (シンプル、属性不要)\nclass User < ApplicationRecord\n  has_and_belongs_to_many :groups\nend\n# groups_users テーブル (user_id, group_id) が必要",
+      commonMistakes: [
+        "HABTM で始めて後から拡張するのは手間。最初から `has_many :through` で。",
+        "中間テーブルに UNIQUE インデックス (user_id + group_id) を貼り忘れて重複登録される。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Many-to-Many Associations (公式)",
+          url: "https://guides.rubyonrails.org/association_basics.html#the-has-many-through-association",
+        },
+      ],
     },
   },
   {
@@ -3592,6 +3674,12 @@ export const questions: Question[] = [
       "size はロード必須",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`count` は問答無用で `SELECT COUNT(*)` を発行、`size` はロード状況を判断して『ロード済みなら配列の length、未ロードなら COUNT』と賢く動く。",
+      "完全に同じではない。ロード後の挙動が異なり、size の方がパフォーマンスに優しい。",
+      "逆。`count` が常に COUNT クエリ、`size` がロード済みならメモリ上の length。",
+      "size はロード必須ではない。未ロード時は COUNT クエリで件数だけ取得する。",
+    ],
     hints: [
       "`count` は問答無用で COUNT クエリ。",
       "`size` はキャッシュを賢く使う。",
@@ -3602,8 +3690,30 @@ export const questions: Question[] = [
         "count: 常に SQL COUNT。size: 関連がロード済みなら配列 length、未ロードなら COUNT。length: 強制ロード後 length。",
       reason:
         "パフォーマンス上の使い分けが重要。既にロード済みのコレクションに `count` するとまた COUNT クエリが飛んで無駄。逆に未ロードに `length` すると全件ロードしてしまう。`size` が一番安全。",
+      beginnerExplanation:
+        "ActiveRecord で **件数を取る 3 つの方法** は微妙に挙動が違い、パフォーマンスに直結します。\n\n**`count`** — 常に SQL COUNT クエリを発行\n```ruby\nuser.posts.count   # SELECT COUNT(*) FROM posts WHERE user_id = 1;\n```\nどんな状態でも問答無用で COUNT。**ロード済みでも再度クエリ** が走るので無駄になることがある。\n\n**`size`** — 賢く判断\n- ロード済み → 配列の `length` (メモリ上で完結)\n- 未ロード → COUNT クエリ\n```ruby\nuser.posts.size    # 未ロードなら COUNT、ロード済みなら length\n```\n\n**`length`** — 強制的に配列をロードしてから length\n```ruby\nuser.posts.length  # SELECT * FROM posts → 全件メモリに → length\n```\n大量データだと OOM の原因。\n\n**実演**:\n```ruby\nuser = User.find(1)\nuser.posts                # まだロードしない (Relation)\nuser.posts.count          # SELECT COUNT(*) FROM posts (1 クエリ)\nuser.posts.size           # SELECT COUNT(*) FROM posts (同じ)\nuser.posts.length         # SELECT * FROM posts → length (全件ロード)\n\nuser.posts.to_a           # ロード完了\nuser.posts.count          # また SELECT COUNT(*) (無駄!)\nuser.posts.size           # ロード済み配列の length (賢い)\nuser.posts.length         # 配列の length\n```\n\n**使い分けルール**:\n- View で `<%= user.posts.size %>` と表示するだけ → **`size` (最も安全)**\n- 後で `user.posts.each` で表示も予定 → **`length`** (どうせ全件ロードする)\n- 大量データで件数だけ知りたい → **`count`** (COUNT クエリ強制)\n\n**`counter_cache`** を使うと、has_many 側に件数カラムを持って `count` を超高速化できます (例: `belongs_to :user, counter_cache: true` で users.posts_count カラムが自動更新)。",
+      modelSelfExplanation: {
+        conclusion:
+          "`count` は常に SQL COUNT を発行、`size` はロード状況を判断して『ロード済みなら配列 length、未ロードなら COUNT』、`length` は配列を強制ロードしてから length。size が最も賢いデフォルト。",
+        reason:
+          "ActiveRecord は『すでにロードされているコレクション』『まだ DB に問い合わせていない Relation』の 2 状態を持つため、件数取得にもいくつかの最適化された手段がある。count はクエリ最適化や HAVING / GROUP BY で COUNT 結果が変わる場面で確実に SQL を打ちたいときに使う。length は『どうせ全件メモリに載せる』場面で他の操作と組み合わせて使う。size は両者の中間で、状況に応じて賢く挙動を変えるのでデフォルトとして推奨される。",
+        example:
+          "ブログ記事一覧で `<%= @posts.size %> 件` のように View で表示するなら size 一択 (Controller で `@posts = Post.includes(:author).limit(20)` していたら .to_a でロードされた後の length になる)。逆に大規模テーブルで『今何件あるか』だけ知りたい監視スクリプトでは `Post.count` で確実に COUNT 句を発行する。投稿数が頻繁に参照される場面では counter_cache で users.posts_count カラムを持たせ、`user.posts.count` を `user.posts_count` (DB の 1 カラム読み出し) に置き換える定番最適化がある。",
+        pitfall:
+          "ロード済みの関連に対して count を呼ぶと、せっかくロード済みなのに再度 COUNT クエリが走って無駄。view で `@posts.each do; end` の後に `@posts.count` を書くと N+1 ならぬ『無駄な COUNT』。逆に未ロードの relation に length を呼ぶと全件メモリにロードしてしまい OOM の温床になる。基本は size、明示的に COUNT を飛ばしたいときだけ count を使う、と覚える。",
+      },
       codeExample:
         "# 関連で実演\nuser = User.find(1)\nuser.posts                # まだロードしない\nuser.posts.count          # SELECT COUNT(*) FROM posts\nuser.posts.size           # SELECT COUNT(*) FROM posts (同じ)\nuser.posts.length         # SELECT * FROM posts → length\n\nuser.posts.to_a           # ロード完了\nuser.posts.count          # また COUNT クエリ (無駄)\nuser.posts.size           # ロード済み配列の length (賢い)\nuser.posts.length         # 配列の length",
+      commonMistakes: [
+        "ロード済みのコレクションに count を呼んで無駄な COUNT クエリを発行する。",
+        "未ロードの relation に length を呼んで全件ロードで OOM になる。",
+      ],
+      references: [
+        {
+          label: "Rails API: ActiveRecord::Relation#count vs size vs length",
+          url: "https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-count",
+        },
+      ],
     },
   },
   {
@@ -3624,8 +3734,34 @@ export const questions: Question[] = [
         "`lock_version` カラム (integer, default 0) を追加すると楽観的ロックが有効に。",
       reason:
         "並行更新で『古いバージョン』を上書きしようとすると `ActiveRecord::StaleObjectError` を投げる仕組み。update 時に `WHERE id = ? AND lock_version = ?` を付けてくれて、ヒットしなければ例外。",
+      beginnerExplanation:
+        "**楽観的ロック (Optimistic Locking)** は『**衝突は滅多に起きないはず** と楽観して、起きたときだけ検出する』排他制御の方式です。\n\n**仕組み**:\n1. テーブルに `lock_version` (integer, default 0) カラムを追加\n2. 読み込み時に lock_version の値も取得\n3. UPDATE 時に `WHERE id = ? AND lock_version = ?` を付ける + `lock_version` を +1\n4. 別プロセスが先に更新していたら `lock_version` が変わっていて WHERE がヒットせず、`ActiveRecord::StaleObjectError` 例外\n\n```ruby\n# migration\nadd_column :users, :lock_version, :integer, default: 0, null: false\n\n# 使い方 (コードは普通)\nuser = User.find(1)        # name='Alice', lock_version=5\nuser.name = 'Bob'\nuser.save\n# 実際のSQL:\n# UPDATE users SET name='Bob', lock_version=6\n# WHERE id=1 AND lock_version=5;\n```\n\n**衝突したとき** (別プロセスが先に lock_version=6 に更新済みだった):\n```ruby\nbegin\n  user.save!\nrescue ActiveRecord::StaleObjectError\n  # 1. ユーザーに『他の人が編集しました』と通知\n  # 2. 再読込してリトライ\n  user.reload\n  user.name = 'Bob'\n  retry\nend\n```\n\n**用途**:\n- 同時編集が稀な業務 (ブログ記事の編集など)\n- ロック取得のオーバーヘッドを避けたい\n- ユーザーに『衝突しました』と画面で通知できる\n\n**悲観的ロック (`lock!` / `with_lock`)** との対比:\n- 楽観的: 衝突は稀という前提、ロックなし、UPDATE 時に検出\n- 悲観的: 必ず衝突するという前提、`SELECT ... FOR UPDATE` で行ロック取得\n\nクリティカルな金銭計算など『衝突したら困る』場面では悲観的ロック (`Account.lock.find(1)`) を使います。",
+      modelSelfExplanation: {
+        conclusion:
+          "カラム名は `lock_version` (integer, default 0)。これを追加すると ActiveRecord が自動的に楽観的ロック (Optimistic Locking) を有効化し、UPDATE 時に WHERE 句で lock_version を比較・+1 する。",
+        reason:
+          "楽観的ロックは『同時更新は稀』という前提のもと、行ロックを取らずに『更新時に version が変わっていたら衝突と判定』する軽量な排他制御。`lock_version` という Rails 規約のカラム名を持つだけで、ActiveRecord が UPDATE 句に `WHERE ... AND lock_version = ?` と `SET lock_version = lock_version + 1` を自動で付加し、影響行数が 0 なら StaleObjectError を投げる。実装変更は不要 (Model も Controller も普通の save コードで OK)。",
+        example:
+          "ブログ記事の編集画面で『別のタブで先に保存されていたら、後の保存をブロックして警告』なら lock_version を入れるだけで実現できる。設定画面・プロフィール編集・在庫数の調整など『衝突は滅多に起きないが、起きたら通知したい』場面で使う。逆に決済処理や在庫減算のように『絶対衝突を避けたい』なら悲観的ロック (`Account.lock.find(1)` で `SELECT ... FOR UPDATE`) を使う。",
+        pitfall:
+          "楽観的ロックの再試行 (retry) を無限ループにすると、衝突が続く場合に CPU を食いつぶす。再試行回数の上限を設けるか、`StaleObjectError` をユーザーに画面で通知して手動で再操作させる。さらに lock_version カラムを忘れて手動で更新すると整合性が崩れる (lock_version 自体も WHERE 対象なので、update_all で別途インクリメントする時は明示的に渡す)。`belongs_to` の `touch: true` で関連レコードの updated_at を更新する場合も、lock_version の整合性に注意。",
+      },
       codeExample:
         '# migration\nadd_column :users, :lock_version, :integer, default: 0, null: false\n\n# 使い方は普通\nuser = User.find(1)        # lock_version = 5\nuser.name = "Alice"\nuser.save                  # WHERE lock_version = 5\n# 別プロセスが先に更新していたら StaleObjectError\n\nbegin\n  user.save!\nrescue ActiveRecord::StaleObjectError\n  retry  # 再読込して再試行\nend',
+      commonMistakes: [
+        "StaleObjectError の retry を無限ループにする。再試行回数の上限を設ける。",
+        "update_all で lock_version カラムを更新せず整合性が崩れる。",
+      ],
+      references: [
+        {
+          label: "Rails API: Optimistic Locking",
+          url: "https://api.rubyonrails.org/classes/ActiveRecord/Locking/Optimistic.html",
+        },
+        {
+          label: "Rails API: Pessimistic Locking",
+          url: "https://api.rubyonrails.org/classes/ActiveRecord/Locking/Pessimistic.html",
+        },
+      ],
     },
   },
   {
