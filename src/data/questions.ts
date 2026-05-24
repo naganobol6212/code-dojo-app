@@ -2968,6 +2968,12 @@ export const questions: Question[] = [
       "def foo(blk:); blk.call; end",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "`&` なしの引数は普通のパラメータ。ブロックを Proc 化して受け取らない。`foo { ... }` で渡したブロックは無視される。",
+      "正解。`&blk` でブロックを Proc として変数 blk に格納。`blk.call` で呼び出せる。",
+      "`*blk` は可変長引数 (splat)。配列としてキャプチャするが、ブロックは受け取らない。",
+      "`blk:` はキーワード引数。`foo(blk: my_proc)` のようにハッシュで渡す場合だが、ブロック構文には対応しない。",
+    ],
     hints: [
       "ブロックは引数の最後に `&blk` で受け取ります。",
       "`&` を付けるとブロック ↔ Proc 変換。",
@@ -2978,8 +2984,30 @@ export const questions: Question[] = [
         "`def foo(&blk)` で渡されたブロックを Proc として `blk` に格納できる。",
       reason:
         "ブロックは通常 `yield` で呼ぶが、明示的に変数に格納したい時は `&blk` で受け取る。逆に Proc/Lambda を呼び出し時にブロックとして渡したい時も `&` を使う: `arr.each(&my_proc)`。",
+      beginnerExplanation:
+        "**`&` の 2 つの使い方** を理解するのが大事。Ruby のブロック ↔ Proc 変換の仕組み。\n\n**① `def foo(&blk)`** — ブロックを Proc として受け取る\n```ruby\ndef call_twice(&blk)\n  blk.call\n  blk.call\nend\n\ncall_twice { puts 'hi' }\n# hi\n# hi\n```\n\n**② `arr.each(&my_proc)`** — Proc をブロックとして渡す\n```ruby\nupcase = ->(s) { s.upcase }\n['a','b'].map(&upcase)   # => ['A','B']\n\n# Symbol も to_proc を経由してブロック化\n['a','b'].map(&:upcase)  # => ['A','B']\n```\n\n**まとめ**:\n- `def m(&blk)` → ブロックを引数 (Proc) として受け取る\n- `m(&proc)` → Proc を引数 (ブロック) として渡す\n- `&` は両方向のブロック ↔ Proc 変換オペレータ\n\n**`yield` との使い分け**:\n```ruby\n# yield: 引数宣言なしで OK、関数内で 1 つのブロックを呼ぶだけ\ndef y\n  yield 10\nend\n\n# &blk: 明示的に Proc として保存、他メソッドに転送できる、複数回呼べる\ndef b(&blk)\n  blk.call(10)\n  other_method(&blk)  # 別メソッドに転送\nend\n```\n\n**実用例**:\n- DSL (Sinatra, RSpec) で `get '/foo' do ... end` の `do ... end` を Proc 化して保存\n- ActiveSupport の `tap` / `then` / `yield_self` 全部ブロックベース\n- Rails の `before_action :method` の代わりに `before_action { ... }` でブロック\n\n**Tip**: `yield` で十分なら `yield` の方がシンプル。Proc として保存・転送する必要があるなら `&blk` を使う。",
+      modelSelfExplanation: {
+        conclusion:
+          "正しい書き方は `def foo(&blk); blk.call; end`。`&blk` は『渡されたブロックを Proc として受け取り blk に格納する』Ruby の構文で、Proc として保存・呼び出し・他メソッドへの転送が可能になる。",
+        reason:
+          "Ruby のブロックは通常 `yield` で暗黙的に呼び出すが、明示的にオブジェクトとして扱いたい場合は `&` 付き引数で Proc に変換して受け取る。`&` は『ブロック ↔ Proc の相互変換オペレータ』として双方向に動き、`def foo(&blk)` ではブロックを Proc に、`foo(&my_proc)` では Proc をブロックに変換する。これによりブロックを変数に保存して後で複数回呼んだり、別メソッドに転送したりが可能になる。yield で済む場面は yield の方がシンプル、明示的に保存・転送するなら &blk。",
+        example:
+          "ActiveSupport の `Object#tap { |o| ... }` は内部で `&blk` で受け取ってインスタンスメソッドとして呼ぶ。DSL ライブラリ (Sinatra, RSpec) で `get '/foo' do ... end` の do/end ブロックを Proc として route テーブルに保存。Rails の `before_action { ... }` でフィルタをラムダ的に渡す。汎用 Service で `Wrapper.new.call(&block)` で受け取って後で複数回呼ぶ、など。",
+        pitfall:
+          "`&blk` で受け取った Proc を別メソッドに渡すには `other_method(&blk)` のように `&` を付け直す必要がある (普通の引数として渡すと Proc のままで意図と違う)。さらに &blk で受け取った blk は『なんとなく lambda 風』に見えるが、実は呼び出し元のブロック由来なので Proc.new 由来 (return がメソッド全体を抜ける挙動など) なので注意。",
+      },
       codeExample:
         'def call_twice(&blk)\n  blk.call\n  blk.call\nend\ncall_twice { puts "hi" }\n# hi\n# hi\n\n# Proc をブロックとして渡す\nupcase = ->(s) { s.upcase }\n["a","b"].map(&upcase)   #=> ["A","B"]\n\n# シンボルを Proc 化\n["a","b"].map(&:upcase)  #=> ["A","B"]',
+      commonMistakes: [
+        "&blk で受け取った Proc を他メソッドに渡すとき `&` を付け忘れる。",
+        "yield で十分なのに &blk を使って冗長にする。シンプルなら yield。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: ブロック引数 (&blk)",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fcall.html#block",
+        },
+      ],
     },
   },
   {
@@ -3006,8 +3034,30 @@ export const questions: Question[] = [
         "既存クラス・モジュールに後付けでメソッドを追加・上書きすることをモンキーパッチと呼ぶ。",
       reason:
         "Ruby はクラスをいつでも再オープン可能。既存挙動を変えたい時に使えるが、思わぬ箇所に影響するため『Refinements』 (限定スコープでパッチ) や `prepend` (元メソッドを呼べる形でラップ) の方が安全。",
+      beginnerExplanation:
+        "**モンキーパッチ (Monkey Patch)** = **既存のクラスやモジュールに後付けでメソッドを追加・上書きする手法**。Ruby の柔軟さの代表例ですが、諸刃の剣です。\n\n**基本** (Ruby は class を何度でも再オープン可能):\n```ruby\nclass String\n  def shout\n    upcase + '!!'\n  end\nend\n\n'hello'.shout   # => 'HELLO!!'   ← String に新メソッド追加!\n```\n\n**強力だが危険**:\n- 全 String インスタンスに影響 (アプリ全体)\n- 他の gem と衝突する可能性\n- バージョン違いで動かなくなる\n- デバッグ困難 (どこで定義されたか追えない)\n\n**安全な代替手段**:\n\n**1. `prepend` でラップ** (元メソッドを super で呼べる):\n```ruby\nmodule LoggedSave\n  def save(*)\n    puts 'before save'\n    super\n    puts 'after save'\n  end\nend\n\nclass Record\n  prepend LoggedSave\n  def save; end\nend\n```\n\n**2. Refinements (限定スコープのパッチ)**:\n```ruby\nmodule StringExt\n  refine String do\n    def shout; upcase + '!!'; end\n  end\nend\n\nusing StringExt    # この行以降のスコープのみ有効\n'hi'.shout         # => 'HI!!'\n```\n\n**実用例 (注意して使う)**:\n- Rails の ActiveSupport は String / Integer / Time などに多数モンキーパッチ (`'hello'.titleize`, `1.day.ago`)\n- 互換性レイヤー (古い Ruby に新メソッドを後付け)\n- デバッグ用の一時的なメソッド追加\n\n**原則**:\n- 自作 gem では基本使わない (利用者の環境を汚す)\n- 自分のアプリで使うなら `lib/core_ext/` のような専用ディレクトリで管理\n- 可能なら Refinements で限定スコープ化\n\n**俗称の由来**: 『動物 (monkey) がコードに後から手を加える (patch)』というユーモア。Python 界隈でも同じ用語。",
+      modelSelfExplanation: {
+        conclusion:
+          "呼称は **モンキーパッチ** (Monkey Patch)。既存のクラスやモジュールに後付けでメソッドを追加・上書きする Ruby の柔軟性を活かした手法。便利だが他の gem と衝突したり予測不能な影響を起こすため、現代では `prepend` や `Refinements` で限定スコープ化するのが推奨される。",
+        reason:
+          "Ruby はクラスをいつでも再オープン可能 (Open Class) という設計で、既存の String や Integer などにもメソッドを追加できる。この自由度は ActiveSupport のような豊富な拡張ライブラリを生み出した一方、グローバルな影響を持つため『動物のように、後から本体に手を加える (patch)』という揶揄を込めて Monkey Patch と呼ばれる。安全な代替手段として prepend (super で元メソッドを呼べる) や Refinements (`using` で限定スコープ化) が用意されている。",
+        example:
+          "ActiveSupport が String / Integer / Time に多数のメソッドを追加 (`1.day.ago`, `'hello'.titleize`, `[1].second`) しているのが代表例。Time の monotonic_now / paper_trail の has_paper_trail / Devise の認証ヘルパー注入なども広義のモンキーパッチ。自作する場合は `lib/core_ext/string_ext.rb` のように専用ディレクトリで管理し、`using` で限定スコープ化するのが安全。",
+        pitfall:
+          "アプリ内のあらゆる場所で String / Integer 等の挙動が変わるため、他の gem が同じメソッドを定義していると衝突。デバッグ時に『なぜこのメソッドが動くのか』が grep で追えない。Refinements は限定スコープで安全だが、有効化範囲のルールが複雑で、メソッド解決順序にハマりやすい。原則は『既存クラスを汚さない別オブジェクトを作る』設計 (Decorator パターンなど) を優先する。",
+      },
       codeExample:
         'class String\n  def shout\n    upcase + "!!"\n  end\nend\n\n"hello".shout   #=> "HELLO!!"\n\n# Refinements (限定スコープ)\nmodule StringExt\n  refine String do\n    def shout; upcase + "!!"; end\n  end\nend\n\nusing StringExt   # この行以降のスコープのみ有効\n"hi".shout',
+      commonMistakes: [
+        "自作 gem で標準クラス (String 等) にモンキーパッチを当てる → 利用者の環境を汚す。基本使わない。",
+        "Refinements は限定スコープだがメソッド解決順序が複雑。lib/core_ext/ で管理 + RubyMine などの IDE で定義箇所追跡。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Refinements",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2frefinements.html",
+        },
+      ],
     },
   },
   {
@@ -3024,6 +3074,12 @@ export const questions: Question[] = [
       "GCは行わない",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "参照カウントは Python の CPython が採用しているが、Ruby ではない。循環参照に弱い欠点があるため Ruby は採用していない。",
+      "正解。Ruby 2.1+ で世代別 Mark and Sweep (RGenGC) を採用。若い世代を優先スキャンして効率化。",
+      "コピー GC は Java の若い世代で使われる方式。Ruby は採用していない (主に Mark and Sweep)。",
+      "Ruby は当然 GC を行う。明示的に GC を無効化 (`GC.disable`) するメソッドは存在するが、デフォルトでは自動 GC。",
+    ],
     hints: [
       "参照カウントは循環参照に弱いので採用していません。",
       "Mark and Sweep が基本で、若い世代と古い世代を分ける『世代別GC』。",
@@ -3034,8 +3090,30 @@ export const questions: Question[] = [
         "Ruby は Mark and Sweep ベースの世代別 GC (RGenGC) を採用。",
       reason:
         "Ruby 2.1 で世代別 GC (Restricted Generational GC) が導入され、生まれて間もないオブジェクトを優先的にスキャンして高速化。2.2 でインクリメンタル GC、3.0 以降は Variable Width Allocation など継続的に改良されている。",
+      beginnerExplanation:
+        "**Ruby の GC (Garbage Collection)** の仕組みを整理。\n\n**現在 (Ruby 2.1+) の戦略**: **Mark and Sweep ベースの世代別 GC (RGenGC)**\n\n**3 つの世代**:\n- **新世代 (young)**: 生まれて間もないオブジェクト → 多くはすぐ消える\n- **古世代 (old)**: 何回かの GC を生き延びた長寿オブジェクト\n- **専用領域**: いくつかの世代に分けて頻度を変えてスキャン\n\n**マイナー GC** (新世代のみスキャン、高速) と **メジャー GC** (全世代スキャン、重い) を使い分ける。\n\n**Ruby 各バージョンの改良**:\n- Ruby 2.1: RGenGC (世代別) 導入\n- Ruby 2.2: インクリメンタル GC (一気にスキャンせず分割)\n- Ruby 2.6: Transient Heap で短命オブジェクトを効率化\n- Ruby 3.0+: Variable Width Allocation (オブジェクト用ヒープ最適化)\n- Ruby 3.3+: M:N スレッドモデル, YJIT の改良\n\n**実用 API**:\n```ruby\n# 手動 GC 実行\nGC.start\n\n# 統計取得\nGC.stat\n# => {count: 23, heap_allocated_pages: 100, total_allocated_objects: ...}\n\n# 一時的に GC 無効化 (パフォーマンスチューニング)\nGC.disable\n# 重い処理\nGC.enable\n\n# 生存オブジェクトの種類別カウント\nObjectSpace.count_objects\n# => {TOTAL: 67890, FREE: 12000, T_STRING: 5000, T_ARRAY: 800, ...}\n```\n\n**他言語との比較**:\n- Python: 参照カウント + 循環参照検出 GC (Mark and Sweep)\n- Java: 世代別 GC + コピー GC (若い世代) + Mark and Sweep (古い世代) など複数方式\n- Go: 並行 Mark and Sweep\n\n**実務 Tips**:\n- 通常気にしなくて良いが、レスポンスタイムが重要な API では GC.stat で監視\n- 大量オブジェクト生成のループでは `GC.disable` で一時停止する手も (副作用注意)\n- メモリリーク調査は `derailed_benchmarks` gem などで",
+      modelSelfExplanation: {
+        conclusion:
+          "Ruby (2.1+) の GC は **Mark and Sweep ベースの世代別 GC (RGenGC)**。若い世代を高頻度でスキャンする Minor GC と、全世代を対象とする Major GC を使い分けて、典型的な短命オブジェクトを効率良く回収する。",
+        reason:
+          "参照カウント方式 (CPython) は循環参照に弱く、各オブジェクトに参照カウンタを持つメモリオーバーヘッドもある。Ruby は古典的な Mark and Sweep (ルートから辿って到達可能なものを残し、それ以外を回収) を採用しつつ、世代別仮説 (大半のオブジェクトは短命) に基づいて世代別 GC で効率化している。Ruby 2.1 の RGenGC 導入以降、GC の停止時間 (pause) は大幅に短縮された。",
+        example:
+          "通常のアプリ開発では GC を意識する必要は無いが、Rails のリクエスト処理でレイテンシーをチューニングする際は `GC.stat[:count]` で GC 回数を監視、`ObjectSpace.count_objects` で生成オブジェクトの種類を分析、大量データ処理では `GC.disable` で一時停止して `GC.start` でまとめて回収、などのテクニックを使う。`derailed_benchmarks` や `memory_profiler` gem でメモリ使用量を可視化。",
+        pitfall:
+          "`GC.disable` で長時間 GC を止めるとメモリ使用量が爆発して OOM。短時間の処理だけで使う。さらに『なんとなく遅い』と感じた時に GC が原因と決めつけるのは早計で、まずは `rack-mini-profiler` や `bullet` で N+1 などのアプリレベルのボトルネックを潰す方が遥かに効果的。GC チューニング (`RUBY_GC_HEAP_*` 環境変数) は専門知識が必要なので最後の手段。",
+      },
       codeExample:
         "# GC を手動実行\nGC.start\n\n# GC 統計\nGC.stat\n#=> {count: 23, heap_allocated_pages: 100, ...}\n\n# 一時的に GC 無効化 (パフォーマンスチューニング用)\nGC.disable\n# ... 処理 ...\nGC.enable\n\n# ObjectSpace で生存オブジェクト調査\nObjectSpace.count_objects",
+      commonMistakes: [
+        "`GC.disable` で長時間 GC を止めると OOM。短時間の処理だけで使う。",
+        "遅さの原因を GC と決めつけず、まず N+1 やアプリ層を疑う。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: GC モジュール",
+          url: "https://docs.ruby-lang.org/ja/latest/class/GC.html",
+        },
+      ],
     },
   },
   {
@@ -3052,6 +3130,12 @@ export const questions: Question[] = [
       "SyntaxError",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。'hello' は String で長さ 5 (> 3) なので、最初の節 `in String => s if s.length > 3` にマッチ。s に 'hello' を束縛して `'long: hello'` を返す。",
+      "'hello' は 5 文字で 3 文字超過。短い文字列 (3 文字以下) なら 2 番目の節にマッチ。",
+      "値はマッチしているので nil にはならない。case/in は最後の式の値を返す。",
+      "case/in は Ruby 3.0+ で正式導入された有効な構文。SyntaxError にはならない。",
+    ],
     hints: [
       "Ruby 3.0+ のパターンマッチング `case/in` 構文。",
       "`String => s` で型チェック + 束縛、`if` でガード句。",
@@ -3062,8 +3146,30 @@ export const questions: Question[] = [
         "Ruby 3.0+ の case/in はパターンマッチング。型チェック、束縛、ガード句が書ける。",
       reason:
         "従来の `case/when` (==/=== 比較) より強力。Hash や Array の構造分解、型ベースマッチ、配列のスプラットなど Elixir/Rust 風の表現が可能。",
+      beginnerExplanation:
+        "**パターンマッチング** (Ruby 3.0+) は **`case/in`** 構文で書く新しい分岐機能。Elixir / Rust / OCaml に近い表現力を持ち、従来の `case/when` よりも強力。\n\n**基本構文**:\n```ruby\ncase value\nin pattern1\n  # マッチ時の処理\nin pattern2 if guard?\n  # ガード付き\nend\n```\n\n**今回のコードの動作**:\n```ruby\ncase 'hello'\nin String => s if s.length > 3   # 型チェック (String) + 束縛 (s) + ガード (length > 3)\n  \"long: #{s}\"                    # ← ここにマッチ! 'long: hello' を返す\nin String                          # 上の節がマッチしなかった場合のフォールバック\n  'short'\nend\n```\n\n**型 + 束縛**: `String => s` は『String 型ならマッチし、その値を s に束縛する』。\n\n**ガード句**: `if s.length > 3` で追加条件。\n\n**より強力な使い方** — Hash の構造分解:\n```ruby\ncase { name: 'Alice', age: 20 }\nin { name: String => n, age: 18.. => a }\n  \"#{n} (#{a})\"      # n='Alice', a=20 が束縛、'Alice (20)' を返す\nin { name: }\n  'anonymous'\nend\n```\n\n**配列の分解**:\n```ruby\ncase [1, 2, 3]\nin [1, *rest]                # 先頭 1 + 残り\n  \"rest: #{rest}\"             # 'rest: [2, 3]'\nin [_, b, _]                  # 真ん中だけ取り出す\n  \"middle: #{b}\"\nend\n```\n\n**API レスポンスの分岐**:\n```ruby\ncase response\nin { status: 200..299, body: String => b }\n  parse(b)\nin { status: 404 }\n  'not found'\nin { status: 500.. }\n  'server error'\nend\n```\n\n**`case/when` (従来) との違い**:\n- `case/when` → `===` 比較 (`String === 'hi'` → true)、シンプル\n- `case/in` → パターンマッチング (構造分解、型 + 束縛、ガード、Range)、強力\n\n**注意**: `case/in` は **必ずマッチしないと NoMatchingPatternError** (`case/when` の else が無いと nil とは違う)。フォールバック節 `else` か `in _` (ワイルドカード) を入れるのが安全。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は 'long: hello'。Ruby 3.0+ の `case/in` パターンマッチングで、`in String => s if s.length > 3` の節が 'hello' (String 型・長さ 5) にマッチし、s に値を束縛して文字列補間で結果を返す。",
+        reason:
+          "Ruby 3.0 で正式導入された case/in パターンマッチングは、Elixir / Rust / OCaml などで知られる関数型言語のパターンマッチを Ruby に取り入れたもの。従来の case/when (=== 比較) より宣言的で、型チェック + 値の束縛 + ガード句 + Hash/Array の構造分解を 1 つの式で書ける。複雑な条件分岐 (API レスポンス処理、状態遷移、設定ファイル解析など) で特に威力を発揮する。",
+        example:
+          "API レスポンス処理 `case res; in { status: 200..299, body: }; parse(body); in { status: 404 }; not_found; end`、Action 形式の Reducer `case action; in { type: 'add', payload: { user: }}; ... end`、設定ファイル `case yaml; in { db: { host:, port: 0..65535 }}; ... end`、JSON Schema 的なバリデーション、複雑な分岐ロジック (case/when では if 分岐の入れ子になっていたもの) を flat に書ける。",
+        pitfall:
+          "`case/in` は **どのパターンにもマッチしないと `NoMatchingPatternError` 例外** を投げる (case/when は else 無しで nil を返すのと違う)。最後に `else` 節か `in _` (ワイルドカード) を入れて catch-all を作るのが安全。さらに Hash パターンマッチで `in { name: }` のように値省略すると、対応する変数 `name` が束縛されるが、'name' キーが無いハッシュではマッチしない。シンプルな分岐なら従来の case/when の方が読みやすい。",
+      },
       codeExample:
         'case { name: "Alice", age: 20 }\nin { name: String => n, age: 18.. => a }\n  "#{n} (#{a})"\nin { name: }\n  "anonymous"\nend\n\n# 配列の分解\ncase [1, 2, 3]\nin [1, *rest]\n  "rest: #{rest}"\nend\n\n# 値の型と条件を一気に\ncase response\nin { status: 200..299, body: String => b }\n  parse(b)\nin { status: 404 }\n  "not found"\nend',
+      commonMistakes: [
+        "case/in は不マッチで例外を投げる。`else` か `in _` のフォールバックを入れる。",
+        "Hash パターンの `{ name: }` 省略は 'name キーが存在する場合のみ' マッチ。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: パターンマッチング (case/in)",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fpattern_matching.html",
+        },
+      ],
     },
   },
 
@@ -6249,6 +6355,12 @@ export const questions: Question[] = [
     code: 'class Foo\nend\n\nfoo = Foo.new\nfoo.instance_eval do\n  @bar = 42\nend\nputs foo.instance_variable_get(:@bar)',
     choices: ["42", "nil", "NameError", "0"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`instance_eval` ブロック内では self が foo に切り替わるため、`@bar = 42` が foo のインスタンス変数として保存される。instance_variable_get で 42 が取得できる。",
+      "@bar は instance_eval で foo に直接書き込まれているので nil ではない。",
+      "instance_eval を使って動的にインスタンス変数を設定しているので NameError は起きない。さらに instance_variable_get は未定義変数で nil を返すだけで例外は投げない。",
+      "@bar には明示的に 42 が代入されている。0 にはならない (デフォルト値の概念はない、未定義なら nil)。",
+    ],
     hints: [
       "`instance_eval` はレシーバの self を切り替えてブロックを実行。",
       "ブロック内の `@bar` は foo のインスタンス変数。",
@@ -6259,8 +6371,30 @@ export const questions: Question[] = [
         "`instance_eval` はオブジェクトの内部状態を直接操作するメタプロの定番。",
       reason:
         "ブロックの self を一時的にレシーバに切り替えるため、`@xxx` でインスタンス変数を直接操作できる。RSpec の `describe ... do` や DSL の実装に多用。`class_eval` (= module_eval) はクラスの定義スコープに入る。",
+      beginnerExplanation:
+        "**`instance_eval`** は **『オブジェクトの内部 (private なインスタンス変数) を外から触る』** メタプログラミングのツール。\n\n**動作**:\n```ruby\nfoo = Foo.new\nfoo.instance_eval do\n  @bar = 42        # self が foo に切り替わるので、これは foo の @bar\nend\nfoo.instance_variable_get(:@bar)   # => 42\n```\n\nブロック内で **self が foo に切り替わる** ため、`@bar` は呼び出し元の @bar ではなく `foo` の @bar として扱われる。\n\n**用途**:\n\n**1. DSL 実装** (RSpec の describe/it など):\n```ruby\nclass Form\n  def initialize(&block)\n    @fields = {}\n    instance_eval(&block)   # ブロック内で field メソッドが直接呼べる\n  end\n  def field(name, type)\n    @fields[name] = type\n  end\nend\n\nForm.new do\n  field :name, :string\n  field :email, :string\nend\n```\n\n**2. テストで private 内部を覗く**:\n```ruby\nobj.instance_eval { @internal_state }   # 取得\nobj.instance_eval { @counter = 0 }      # リセット\n```\n\n**3. 特異メソッド定義**:\n```ruby\nfoo.instance_eval do\n  def shout                # foo だけの特異メソッド\n    'HI'\n  end\nend\nfoo.shout    # => 'HI'\n```\n\n**`class_eval` (= `module_eval`) との違い**:\n- `instance_eval` → self がインスタンスに、`def` で特異メソッド定義\n- `class_eval` → self がクラスに、`def` で通常のインスタンスメソッド定義\n\n```ruby\nclass Foo; end\n\nFoo.class_eval do\n  def hello; 'hi'; end       # Foo のインスタンスメソッド\nend\nFoo.new.hello   # => 'hi'\n\nFoo.instance_eval do\n  def hello; 'hi'; end       # Foo の特異メソッド (= クラスメソッド)\nend\nFoo.hello       # => 'hi'\n```\n\n**注意**:\n- `instance_eval` の中で `def` を使うと**特異メソッド**が定義される (普通のメソッドではない)\n- 普通のメソッド定義なら `define_method` を使う\n- DSL では便利だが、外部からインスタンス変数を触ることは原則カプセル化違反なので慎重に",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は 42。`instance_eval` のブロック内では self がレシーバ (foo) に切り替わるため、`@bar = 42` が foo のインスタンス変数として保存される。その後 `foo.instance_variable_get(:@bar)` で 42 が取得できる。",
+        reason:
+          "`instance_eval` は『一時的に self を別オブジェクトに切り替えてブロックを実行する』メタプログラミング機能。これによりブロック内で `@variable` 構文を使ってインスタンス変数を直接読み書きでき、`def` で特異メソッドを定義できる。RSpec の describe/it や Sinatra の get/post などの DSL 実装の中核となる仕組み。`class_eval` (alias: module_eval) はクラスの定義スコープに入るので、ブロック内 def が通常のインスタンスメソッドとして定義される。",
+        example:
+          "RSpec の `describe 'User' do; it 'works' do; ...; end; end` の各ブロックは内部で instance_eval されており、subject や let が呼べる。Sinatra の `get '/foo' do; ...; end` も同様。Rails の class_eval は `Post.class_eval { has_many :comments }` のように既存クラスにメソッドを動的追加。テストで `obj.instance_eval { @internal }` で private 内部を覗くデバッグ的用途も。",
+        pitfall:
+          "instance_eval は外部からカプセル化を破る強力すぎる機能なので、安易に使うとクラス設計の意味が薄れる。原則は public メソッドで API を提供し、instance_eval は DSL 実装などの限定的な場面で使う。さらに instance_eval 内で `def` を書くと特異メソッドが定義される (通常メソッドとは別) ので、意図せぬ挙動になりやすい。class_eval / instance_eval / module_eval の使い分けも紛らわしいので、リファレンスで確認しながら使う。",
+      },
       codeExample:
         'class Empty; end\n\ne = Empty.new\ne.instance_eval do\n  @name = "Alice"\n  def shout              # 特異メソッド定義\n    "HI"\n  end\nend\n\ne.instance_variable_get(:@name)  #=> "Alice"\ne.shout                          #=> "HI"\n\n# class_eval (クラス本体の中に入る)\nClass.new.class_eval do\n  define_method(:greet) { "hi" }\nend',
+      commonMistakes: [
+        "instance_eval 内の `def` は特異メソッド (そのオブジェクト限定)、class_eval 内の def は通常のインスタンスメソッド。混同しない。",
+        "instance_eval はカプセル化破壊。原則は public API を経由、DSL 実装などの限定用途で。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Object#instance_eval / Module#class_eval",
+          url: "https://docs.ruby-lang.org/ja/latest/method/BasicObject/i/instance_eval.html",
+        },
+      ],
     },
   },
   {
