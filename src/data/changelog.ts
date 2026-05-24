@@ -17,6 +17,22 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-26-k",
+    date: "2026-05-26",
+    title: "🐧 Study Guide に Linux & CLI を追加 (7 章)",
+    badge: "content",
+    highlights: [
+      "🐧 Linux & CLI の地図 — シェル・パイプ・運用 (新規ガイド、7 章 / 約 60 分)",
+      "1. ファイルシステムと FHS / ワイルドカード・ブレース展開 / 2. テキスト処理 (grep/sed/awk/sort/uniq/jq) / 3. find と xargs (fd/rg 含む) / 4. I/O とパイプ (>/2>&1/tee/プロセス置換) / 5. プロセスと権限 (ps/kill/chmod/sudo) / 6. ネットワーク (ssh/rsync/curl/jq/障害切り分け) / 7. シェル自動化 (alias/tmux/cron/systemd)",
+      "『繋がらない』の障害切り分けを ping → DNS → port → HTTP → 証明書 のレイヤー順で",
+      "sudo tee -a / プロセス置換 / xargs -0 / find -exec ... + / OIDC / systemd-timer など実務直結のトピックを実例で",
+      "fd / ripgrep / jq / HTTPie / tmux など『現代の代替』も併記",
+      "cli-001 〜 cli-016 の全 16 問と相互リンク",
+      "Guide 総数: 9 → 10、章総数: 63 → 70",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-26-j",
     date: "2026-05-26",
     title: "🔧 Study Guide に Git を追加 (7 章)",
