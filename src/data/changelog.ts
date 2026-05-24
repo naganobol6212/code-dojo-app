@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-v",
+    date: "2026-05-24",
+    title: "Ruby OOP oop-006〜010 の解説拡充 (Phase 2)",
+    badge: "content",
+    highlights: [
+      "oop-006 (include/prepend/extend の挿入位置) / oop-007 (def self) / oop-008 (private の真の意味) / oop-009 (Comparable + <=>) / oop-010 (Struct と Data)",
+      "Ruby のメタプログラミング基礎と Mixin の使い分けを深掘り",
+      "ruby-oop 進捗 10/12",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-u",
     date: "2026-05-24",
     title: "Ruby OOP カテゴリの解説拡充スタート (oop-001〜005)",

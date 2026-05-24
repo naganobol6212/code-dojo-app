@@ -1666,6 +1666,12 @@ export const questions: Question[] = [
       "prepend は廃止された",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。include は祖先に Module を挿入してインスタンスメソッドを追加、extend は特異クラスに挿入してクラスメソッド扱い、prepend は自クラスより前に挿入して優先順位を上げる。",
+      "三者は挿入位置と効果がそれぞれ異なる。同じではない。",
+      "逆。`include` がインスタンスメソッド、`extend` が特異メソッド (クラスメソッド)。覚え方を取り違えるとアンチパターン。",
+      "`prepend` は Ruby 2.0 で導入された現役の機能。元メソッドをラップする計装などで現代でも使われる。",
+    ],
     hints: [
       "include はインスタンスメソッドを追加。",
       "extend は特異メソッド (= クラスメソッドや単体オブジェクトのメソッド) を追加。",
@@ -1676,8 +1682,30 @@ export const questions: Question[] = [
         "include = インスタンス側、extend = 特異 (クラス) 側、prepend = 親より優先順位高く差し込む。",
       reason:
         "Ruby のメソッド探索順 (ancestors) は: prepend ← 自クラス ← include ← 親クラス ... の順。prepend は元メソッドを上書きしてラップする時 (例: alias 不要なメソッド計装) に便利。",
+      beginnerExplanation:
+        "Ruby の Module 取り込みには **3 つの方法** があり、それぞれ挿入位置が違います。\n\n```\n[prepend した Module] ← 一番優先\n         ↓\n    [自クラス]\n         ↓\n[include した Module] ← include は自クラスより後\n         ↓\n   [親クラス]\n         ↓\n     [Object]\n```\n\n**`include M`** — 自クラスの『下』に挿入 (継承チェーンに親 Module として入る)\n```ruby\nmodule M; def hi; 'M'; end; end\nclass A\n  include M\n  def hi; 'A'; end\nend\nA.new.hi          # => 'A' (自クラスが優先)\nA.ancestors        # => [A, M, Object, ...]\n```\n\n**`prepend M`** — 自クラスの『上』に挿入 (より優先される)\n```ruby\nclass B\n  prepend M\n  def hi; 'B'; end\nend\nB.new.hi          # => 'M' (M が B を上書き)\nB.ancestors        # => [M, B, Object, ...]\n```\n→ super で B の hi を呼ぶこともできる。**メソッドをラップする計装** (ロギング、認証チェック) で頻出。\n\n**`extend M`** — 特異クラスに挿入 (クラスメソッドとして使える)\n```ruby\nclass C\n  extend M\nend\nC.hi               # => 'M' (クラスメソッド扱い)\n```\n\n**まとめ**:\n| | 挿入位置 | 効果 |\n|---|---|---|\n| `include` | 自クラスの下 | インスタンスメソッド追加 |\n| `prepend` | 自クラスの上 | インスタンスメソッドを上書き可能 |\n| `extend` | 特異クラス | クラスメソッド (or 特定インスタンスのみ) 追加 |\n\n**使い分け**:\n- 普通の Mixin → `include`\n- 既存メソッドの計装 (ロギング、メトリクス) → `prepend`\n- クラスメソッドとして提供 → `extend` または `include` した Module 内で `extend self`",
+      modelSelfExplanation: {
+        conclusion:
+          "`include` は Module をインスタンスメソッドとして追加 (祖先チェーンの自クラスの下)、`extend` は特異クラスに追加してクラスメソッド扱いに、`prepend` は自クラスの上に挿入して既存メソッドより優先される。3 つは挿入位置が異なる別物。",
+        reason:
+          "Ruby のメソッド解決順序 (MRO, ancestors) は『prepend → 自クラス → include → 親クラス → ...』の順で探索する。include は自クラスの実装が優先 (Mixin として『デフォルト実装』を提供)、prepend は Module 側が優先 (ラッパとして既存メソッドを上書き)、extend は特異クラス (singleton class) に挿入することで対象がクラスならクラスメソッド、対象がインスタンスならそのオブジェクト限定のメソッドになる。これにより 1 つの仕組みで多様な Mixin パターンを表現できる。",
+        example:
+          "include の例: `class Post; include Comparable; def <=>(other); created_at <=> other.created_at; end; end` で `<`, `>` 等が無料で手に入る。prepend の例: `module LogCalls; def call(*); puts 'called'; super; end; end; class Service; prepend LogCalls; def call; ...; end; end` で既存 call をログ付きでラップ。extend の例: `class String; extend MyHelpers; end` で `String.helper_method` のようなクラスメソッドを追加。Rails の concern (`ActiveSupport::Concern`) は include + extend ClassMethods のパターンで両方提供。",
+        pitfall:
+          "include と extend を取り違えるのが定番ミス (extend を意図して include した結果クラスメソッドが追加されない)。prepend は便利だが多用すると『どこからメソッドが来てるか』追跡困難になり、`Class.ancestors` で確認する習慣が必要。さらに同じメソッドを複数 Module で定義して include / prepend を混ぜると優先順位が複雑化する。",
+      },
       codeExample:
         'module M\n  def hi; "M"; end\nend\n\nclass A\n  include M       # A の祖先: [A, M, Object,...]\n  def hi; "A"; end\nend\nA.new.hi  #=> "A"  (Aが優先)\n\nclass B\n  prepend M       # B の祖先: [M, B, Object,...]\n  def hi; "B"; end\nend\nB.new.hi  #=> "M"  (Mが優先!)\n\nclass C\n  extend M\nend\nC.hi      #=> "M"  (クラスメソッドとして)',
+      commonMistakes: [
+        "include / extend を取り違えてクラスメソッドが追加されない or インスタンスメソッドが追加されない。",
+        "prepend を多用してメソッド解決順序が追えなくなる。`Class.ancestors` で常に確認。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Module#include / #prepend / #extend",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Module.html",
+        },
+      ],
     },
   },
   {
@@ -1697,8 +1725,30 @@ export const questions: Question[] = [
       summary: "`def self.method_name` でクラスメソッドを定義。",
       reason:
         "Ruby のクラスメソッドは『クラスオブジェクトの特異メソッド』として実装されている。`self` (= 現在のクラス) の特異メソッドという意味で `def self.foo`。",
+      beginnerExplanation:
+        "Ruby で **クラスメソッド** (= インスタンスではなくクラス自身に対して呼ぶメソッド) を定義する書き方は **`def self.method_name`**。\n\n**インスタンスメソッド vs クラスメソッド**:\n```ruby\nclass User\n  def greet            # インスタンスメソッド (各オブジェクトで呼ぶ)\n    'Hi'\n  end\n\n  def self.count       # クラスメソッド (クラス自身に対して呼ぶ)\n    100\n  end\nend\n\nUser.new.greet         # 'Hi'  ← インスタンス経由\nUser.count             # 100   ← クラス自身に\n```\n\n**`self` の意味**: クラス定義の直下では『現在のクラス自身 (= User)』を指す擬似変数。だから `def self.count` は『User クラス自身の count メソッド』を定義する。\n\n**もう 1 つの書き方** (まとめたい時に便利):\n```ruby\nclass User\n  class << self          # 特異クラスを開く\n    def find_by(name); end\n    def create!(attrs); end\n  end\nend\n# def self.find_by ... と def self.create! ... を書くより少し短い\n```\n\n**実例 (Rails)**:\n```ruby\nclass User < ApplicationRecord\n  # クラスメソッド (scope の代わりにも使える)\n  def self.active\n    where(active: true)\n  end\nend\n\nUser.active.count\n```\n\n**self の文脈による意味**:\n- クラス定義の直下: 現在のクラス (例: User)\n- インスタンスメソッド内: 現在のインスタンス (例: user1)\n- クラスメソッド内: 現在のクラス (例: User)\n\n**Tip**: scope (Rails の DSL) は引数なしの簡易クラスメソッドのシュガー。複雑なロジック (引数バリデーション、分岐) はクラスメソッドの方が書きやすい。",
+      modelSelfExplanation: {
+        conclusion:
+          "クラスメソッドを定義する語句は `self`。`def self.method_name` と書くことで『現在のクラス自身の特異メソッド』として定義され、`ClassName.method_name` で呼び出せる。",
+        reason:
+          "Ruby はすべてオブジェクトという思想で、クラス自体も Class クラスのインスタンスとして扱う。クラスメソッドは『そのクラスオブジェクトに対する特異メソッド (singleton method)』として実装されており、`self` で『現在のクラスを指す』ことで定義する。`class << self ... end` で特異クラスを明示的に開き、複数のクラスメソッドをまとめて定義することもできる。これは Ruby のメタプログラミングの基礎で、Rails の scope / クラスメソッドベースの DSL もこの仕組みの上に成り立つ。",
+        example:
+          "Rails の Model で `def self.active; where(active: true); end` のような scope 相当のクラスメソッド、ファクトリパターンの `def self.build_from(json); ...; end`、設定メソッドの `def self.configure; yield(configuration); end` など。Rails 自身の `Rails.application` や `ActiveRecord::Base.connection` などもすべてクラスメソッド。",
+        pitfall:
+          "`def self.foo` を意図して `def foo` (self なし) と書くとインスタンスメソッドになってしまい、`User.foo` の呼び出しで NoMethodError。逆にインスタンスメソッドを `def self.foo` と書くと `User.new.foo` で呼べなくなる。`class << self` ブロック内で書いた場合、private は別の意味になる (特異クラスの中の private はクラスメソッドの可視性に効く) ので注意。",
+      },
       codeExample:
         "class User\n  def self.count\n    100\n  end\n\n  # 別の書き方 (まとめて定義したい時)\n  class << self\n    def find_by(name); end\n    def create!(attrs); end\n  end\nend\n\nUser.count   #=> 100\n\n# Rails では .scope や class method を自然に書ける\nclass User < ApplicationRecord\n  def self.active\n    where(active: true)\n  end\nend",
+      commonMistakes: [
+        "`def self.foo` と `def foo` を間違える → クラスメソッド / インスタンスメソッドの取り違え。",
+        "`class << self` 内の private はクラスメソッドの可視性に効く (通常の private とは挙動が違う)。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: 特異メソッド / class << self",
+          url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fdef.html#singleton_method",
+        },
+      ],
     },
   },
   {
@@ -1715,6 +1765,12 @@ export const questions: Question[] = [
       "クラス外から完全に隠蔽される (リフレクションでも見えない)",
     ],
     answerIndex: 1,
+    choiceExplanations: [
+      "Java の private と違い、Ruby の private はサブクラスから呼べる (継承チェーンで隠蔽されない)。",
+      "正解。Ruby の private は『明示的なレシーバ (`self.method` や `obj.method`) を付けて呼べない』だけの制約。同じインスタンス内ならレシーバ省略で呼べる。",
+      "別オブジェクトでも protected なら呼べる場合がある (Ruby 独自の概念)。さらに send 経由でも呼べてしまう。",
+      "リフレクション (`send`, `method`, `instance_method`) では普通に見える。完全に隠蔽するわけではない。",
+    ],
     hints: [
       "Java の private とは少し違います。",
       "サブクラスからは呼べます。",
@@ -1725,10 +1781,29 @@ export const questions: Question[] = [
         "Ruby の private は『明示的なレシーバを付けられない』だけ。サブクラスからは呼べる。",
       reason:
         "他言語の private とはセマンティクスが違います。あくまで『同じインスタンスのメソッドからのみ、レシーバ省略形で呼べる』という制約。サブクラスからは呼び放題で、`send` でも呼べてしまう (リフレクションでは隠蔽されない)。",
+      beginnerExplanation:
+        "Ruby の **`private`** は **他言語の private と意味が違う** ので、Java や C# 経験者は要注意です。\n\n**Ruby の private の本当のルール**:\n『明示的なレシーバ (`self.foo` や `obj.foo`) を付けて呼べない』だけ。\n\n```ruby\nclass User\n  def public_m\n    private_m          # ✅ OK (レシーバ省略)\n    self.private_m     # ❌ NG (Ruby 2.7+ では setter のみ例外)\n  end\n\n  private\n\n  def private_m; 'private'; end\nend\n\nUser.new.public_m      # ✅ OK (public 経由)\nUser.new.private_m     # ❌ NoMethodError (private method)\nUser.new.send(:private_m)  # ⚠️ 呼べてしまう (send は無視)\n```\n\n**サブクラスからは呼べる**:\n```ruby\nclass Admin < User\n  def call\n    private_m          # ✅ OK (継承先でも呼べる)\n  end\nend\n```\n\n**3 種類の可視性 (Ruby 独自)**:\n- `public` — どこからでも呼べる (デフォルト)\n- `private` — 同じインスタンスから、レシーバなしで\n- `protected` — 同じクラス / サブクラスのインスタンスから、レシーバ付きでも OK (オブジェクト間でアクセスしたい時)\n\n**書き方**:\n```ruby\nclass User\n  def a; end\n\n  private          # 以降は全部 private\n  def b; end\n  def c; end\n\n  public\n  def d; end       # public に戻す\n\n  private :e       # 個別指定 (e は private)\nend\n```\n\n**実務での注意**:\n- private は **強制力が弱い** (`send` で破られる)。クライアントへの『この API を使ってね』というシグナル程度。\n- セキュリティ目的では使わない。秘密情報は別オブジェクトに分離。\n- private のテストは原則しない (public 経由でテスト)。private を直接テストしたくなったら設計の見直しサイン。",
+      modelSelfExplanation: {
+        conclusion:
+          "Ruby の `private` は『明示的なレシーバ (`self.foo` や `obj.foo`) を付けて呼べない』だけの制約。同じインスタンス内ならレシーバ省略で呼べ、サブクラスからも呼べ、`send` 経由でも呼べる。Java の private とは大きく違う。",
+        reason:
+          "Ruby の private はあくまで『呼び出し記法』の制約で、継承やリフレクションには影響しない。これは『private は他のオブジェクトとの境界を守るためのもので、自分自身のサブクラスや内部実装からのアクセスは許す』という設計思想による。`send` で呼べてしまうのも『メタプログラミングの自由度を優先』した結果で、強制的なアクセス制御ではなく『この API は内部用です』というシグナルとして使う。protected は『同じクラスのインスタンス間』でレシーバ付きアクセスを許す、Ruby 独自の中間レベル。",
+        example:
+          "Service Object で `class PostPublisher; def call; validate!; publish!; notify!; end; private; def validate!; ...; end; def publish!; ...; end; def notify!; ...; end; end` のように、public は `call` 1 つで、内部実装は private で分割する『Single Public Method』パターンが定型。Rails の ApplicationController で `private; def authenticate_user!; ...; end` のような before_action 用ヘルパーを定義するのも頻出。",
+        pitfall:
+          "Java の private 感覚で『private にすればテストしなくていい』と誤解すると、複雑なロジックがテストされないままになる。逆に『private を直接テストしたい』場面では、その private メソッドが別クラスに切り出せるシグナル (Single Responsibility 違反のサイン)。`send(:private_method)` でテストするのは最後の手段で、リファクタリングの方が望ましい。",
+      },
       codeExample:
         'class User\n  def public_m\n    private_m         # OK\n    self.private_m    # Ruby 2.7+ なら setter のみOK、それ以外NG\n  end\n\n  private\n\n  def private_m; "private"; end\nend\n\nUser.new.public_m       # OK\nUser.new.private_m      # NoMethodError (private method)\nUser.new.send(:private_m) # 呼べてしまう\n\n# サブクラスからも呼べる\nclass Admin < User\n  def call; private_m; end   # OK\nend',
       commonMistakes: [
         "Ruby 2.7+ では private な setter は `self.foo = x` の形でのみ呼べるよう拡張された。",
+        "private を強制的なアクセス制御と勘違い。send で破れることを忘れない。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Module#private",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Module/i/private.html",
+        },
       ],
     },
   },
@@ -1746,6 +1821,12 @@ export const questions: Question[] = [
       "to_s, inspect, ==",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。Comparable は順序比較系メソッド (`<`, `>`, `<=`, `>=`, `==`, `between?`, `clamp`) を `<=>` 1 つから自動生成する。",
+      "算術演算子は別物。`+` や `-` は各クラスで個別に定義する (Comparable とは無関係)。",
+      "each / map / select は Enumerable モジュールが提供する。Comparable とは別。",
+      "to_s / inspect / == は Object 標準。Comparable が特別に生成するのは順序比較系。",
+    ],
     hints: [
       "Comparable は順序比較に関するメソッドを提供。",
       "`<=>` (宇宙船演算子) で 1 個定義すると比較系がまとめて手に入る。",
@@ -1756,8 +1837,30 @@ export const questions: Question[] = [
         "Comparable は `<=>` を 1 つ定義すれば < <= == >= > between? clamp が手に入る。",
       reason:
         "宇宙船演算子 `<=>` は -1/0/1 を返す比較。Comparable はこれを使って大小比較系メソッドを生成。同様に Enumerable は each を定義すれば map/select/reduce などが付いてくる。",
+      beginnerExplanation:
+        "**Comparable** は『**`<=>` (宇宙船演算子) を 1 つ実装すれば、比較系メソッドが全部もらえる**』という強力な Mixin です。\n\n**`<=>` の仕様**: 2 つの値を比較して `-1` (小) / `0` (等しい) / `1` (大) / `nil` (比較不能) を返す。\n\n**使い方**:\n```ruby\nclass Version\n  include Comparable\n  attr_reader :major, :minor\n  def initialize(s)\n    @major, @minor = s.split('.').map(&:to_i)\n  end\n  def <=>(other)\n    [major, minor] <=> [other.major, other.minor]  # 配列の <=> を委譲\n  end\nend\n\nv1 = Version.new('1.2')\nv2 = Version.new('1.5')\nv1 < v2                # => true     ← 自動生成!\nv1 == v2               # => false   ← 自動生成!\nv1.between?(v1, v2)    # => true    ← 自動生成!\nv1.clamp(v1, v2)       # => v1      ← 自動生成!\n[v2, v1].sort          # => [v1, v2] (sort も Comparable を使う)\n```\n\n**Comparable が提供するメソッド**:\n- `<`, `<=`, `==`, `>=`, `>` — 大小比較\n- `between?(min, max)` — 範囲内?\n- `clamp(min, max)` — 範囲に収める\n\nさらに `Array#sort` や `Array#min` `max` も内部で `<=>` を使うので、自作クラスでも自動で動くようになる。\n\n**仲間** (同じパターン):\n- **Enumerable**: `each` を 1 つ実装すれば `map`, `select`, `reduce`, `find` などが全部もらえる\n- **Forwardable**: `def_delegator` で委譲メソッドを宣言的に\n\n**Tip**: `<=>` の実装は **タプル比較を委譲する** のが定石。`[a, b] <=> [other.a, other.b]` のように配列の `<=>` を使うと多段比較も簡潔に書ける。",
+      modelSelfExplanation: {
+        conclusion:
+          "Comparable を include して `<=>` を 1 つ定義すると、`<` `<=` `==` `>=` `>` `between?` `clamp` の比較系メソッドが自動で手に入る。さらに `Array#sort` や `min`/`max` でも自動的に使われる。",
+        reason:
+          "Comparable は Ruby 標準ライブラリの代表的な Mixin で、『`<=>` 1 つで -1/0/1/nil を返せば比較系メソッドが全部生える』という宣言的 API を提供する。これにより重複した比較メソッドのボイラープレートを書かずに済む。同じパターンで Enumerable は `each` だけで map/select/reduce/find などを提供する。これらの Mixin は『1 つのコア操作 (`<=>` や `each`) を実装すれば豊富な API が得られる』という Ruby の Mixin 思想の典型例。",
+        example:
+          "Version クラスや SemVer のように『順序がある値オブジェクト』を作るとき、Comparable を include して `<=>` を `[major, minor, patch] <=> [other.major, other.minor, other.patch]` で実装するだけで sort / between? / max / min がすべて動く。Date / Time クラスや Numeric も内部で Comparable を使っており、自作クラスでも同じパターンで設計できる。",
+        pitfall:
+          "`<=>` の実装でレシーバと other の型が違うときは nil を返すのが定石 (他言語の比較で例外を投げるのとは違う Ruby の規約)。さらに `==` を override すると Comparable が自動生成した `==` を上書きしてしまうので、整合性に注意。Comparable と `<=>` ベースで Hash キーに使う場合は `eql?` と `hash` も整合させる必要がある。",
+      },
       codeExample:
         'class Version\n  include Comparable\n  attr_reader :major, :minor\n  def initialize(s)\n    @major, @minor = s.split(".").map(&:to_i)\n  end\n  def <=>(other)\n    [major, minor] <=> [other.major, other.minor]\n  end\nend\n\nv1 = Version.new("1.2")\nv2 = Version.new("1.5")\nv1 < v2                #=> true\nv1.between?(v1, v2)    #=> true\nv1.clamp(v1, v2)       #=> v1',
+      commonMistakes: [
+        "`<=>` で型不一致のとき例外を投げる → 標準ライブラリ的には nil を返すのが正しい。",
+        "Comparable とともに `==` を override すると衝突。`<=>` だけで完結させるのが安全。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Comparable モジュール",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Comparable.html",
+        },
+      ],
     },
   },
   {
@@ -1774,6 +1877,12 @@ export const questions: Question[] = [
       "並列処理を行う",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`Struct.new(:x, :y)` で attr_accessor + initialize + == / hash が自動定義された軽量クラスを 1 行で作れる。値オブジェクトや DTO に最適。",
+      "巨大データはむしろ Array / Hash / ActiveRecord の方が向いている。Struct は数個の属性を持つ小さなクラス用。",
+      "DB 接続は ActiveRecord や Sequel などの ORM の役割。Struct は純粋な Ruby のクラス。",
+      "並列処理は Thread / Fiber / Ractor の役割。Struct とは無関係。",
+    ],
     hints: [
       "Struct はクラスを 1 行で作れるショートカット。",
       "attr_accessor + initialize + ==/hash が自動定義。",
@@ -1784,8 +1893,34 @@ export const questions: Question[] = [
         "Struct は属性付き値オブジェクトを簡単に作るためのクラスファクトリ。",
       reason:
         "DTO / 値オブジェクト / 簡易レコードの即席実装に最適。Ruby 3.2 で `Data.define` が正式導入され、イミュータブル版の Struct として推奨されつつある。",
+      beginnerExplanation:
+        "**Struct** は **『属性をいくつか持つ軽量なクラスを 1 行で作る』** ためのクラスファクトリです。Hash を返すよりも『型』として扱いたいときに便利。\n\n**`Struct.new` の便利機能**:\n```ruby\nPoint = Struct.new(:x, :y) do\n  def distance\n    Math.sqrt(x**2 + y**2)\n  end\nend\n\np = Point.new(3, 4)\np.x                  # => 3            ← attr_accessor 相当\np.distance           # => 5.0          ← ブロック内で定義したメソッド\np == Point.new(3,4)  # => true         ← 自動で値比較\n```\n\n**自動定義されるもの**:\n- `attr_accessor :x, :y` (getter / setter)\n- `initialize(x, y)` (位置引数 or キーワード引数)\n- `==`, `eql?`, `hash` (値ベース)\n- `to_a`, `to_h` (配列化、Hash 化)\n- `members` (属性名のリスト)\n\n**用途**:\n- **値オブジェクト (Value Object)**: 数値や座標のような『値』を表現\n- **DTO (Data Transfer Object)**: API レスポンスや関数間のデータ受け渡し\n- **簡易レコード**: テスト中の fixture や、Hash で持ちたくない構造化データ\n\n**Hash との比較**:\n| | Hash | Struct |\n|---|---|---|\n| アクセス | `h[:name]` | `s.name` |\n| 型 | 全部 Hash | 専用クラス |\n| メソッド追加 | 不可 | OK |\n| 型チェック | できない | `is_a?(Point)` |\n\n**Ruby 3.2+ の `Data.define`** (イミュータブル版、推奨):\n```ruby\nUser = Data.define(:name, :age)\nu = User.new(name: 'Alice', age: 20)\nu.name = 'x'    # NoMethodError (immutable!)\nu.with(name: 'Bob')   # 新しい User を返す\n```\nミュータブルが不要なら Data.define の方が安全。バグの温床になりにくい。\n\n**現代の使い分け**:\n- 簡易データ → `Data.define` (Ruby 3.2+)\n- ミュータブル必要 → `Struct.new`\n- 巨大データ → ActiveRecord / 専用クラス",
+      modelSelfExplanation: {
+        conclusion:
+          "Struct は『属性をいくつか持つ軽量な値オブジェクトを 1 行で作る』ためのクラスファクトリ。`Point = Struct.new(:x, :y)` だけで attr_accessor / initialize / 値ベースの == / to_a / to_h などが自動定義され、DTO や簡易レコードに最適。",
+        reason:
+          "毎回 `class Point; attr_accessor :x, :y; def initialize(x, y); @x=x; @y=y; end; def ==(o); x == o.x && y == o.y; end; end` のように書くのは冗長。Struct はこのボイラープレートを `Struct.new(:x, :y)` の 1 行に圧縮するクラスファクトリ。値ベースの比較 / 配列化 / Hash 化なども自動で提供し、Hash よりも『型としての意味』を持たせたい場面で便利。Ruby 3.2 で導入された `Data.define` はイミュータブル版で、関数型プログラミングのスタイルに合う設計。",
+        example:
+          "テスト fixture で `User = Struct.new(:name, :email)` として `User.new('Alice', 'a@x.com')`、API のレスポンスを `Response = Struct.new(:status, :body)` で型化、座標 `Point = Struct.new(:x, :y, :z)` で計算用 DTO、設定オブジェクト `Config = Struct.new(:host, :port, keyword_init: true)` でキーワード引数化、など多用される。Rails でも内部実装で Struct が頻出 (例: `ActiveRecord::Result#to_a` の結果)。",
+        pitfall:
+          "Struct はデフォルトでミュータブル (`p.x = 5` で書き換え可)、しかも `==` が値ベースなので Hash キーに使うと意図せずキーが衝突することがある。イミュータブルにしたいなら `Struct.new(...).new(...).freeze` するか Ruby 3.2+ の `Data.define` を使う。さらに Struct 同士を比較するとクラスが違っても属性値が同じなら == が true になる罠 (`Point.new(1, 2) == Other.new(1, 2)` は false だが、構造的に等しいかどうかの混乱が起きやすい)。",
+      },
       codeExample:
         'Point = Struct.new(:x, :y) do\n  def distance\n    Math.sqrt(x**2 + y**2)\n  end\nend\n\np = Point.new(3, 4)\np.x                #=> 3\np.distance         #=> 5.0\np == Point.new(3,4) #=> true (値で比較)\n\n# Ruby 3.2+ のイミュータブル版\nUser = Data.define(:name, :age)\nu = User.new(name: "Alice", age: 20)\nu.name = "x"   # NoMethodError (immutable)',
+      commonMistakes: [
+        "Struct がデフォルトでミュータブルなことを忘れる。イミュータブルが欲しいなら Data.define (Ruby 3.2+)。",
+        "Struct を Hash キーに使うとき == が値ベースで動くので意図せず衝突する。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Struct",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Struct.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Data (Ruby 3.2+)",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Data.html",
+        },
+      ],
     },
   },
   {
