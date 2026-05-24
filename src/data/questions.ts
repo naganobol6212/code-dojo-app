@@ -3624,8 +3624,29 @@ export const questions: Question[] = [
       summary: "`String#strip` は前後の空白文字を削除する。",
       reason:
         "削除対象はスペース・タブ・改行 (\\t \\n \\r 等)。中央の空白は残る。`lstrip` / `rstrip` で片側のみ。フォーム入力の正規化で頻出。",
+      beginnerExplanation:
+        "`strip` は **「文字列の前後にくっついた空白を取り除く」** メソッドです。string trimming の Ruby 版と覚えると馴染みやすいです。\n\n削除対象は『空白系の文字』全般で、半角スペース・タブ (\\t)・改行 (\\n)・キャリッジリターン (\\r) などが含まれます。**文字列の中央にある空白は残る** ので、`'  hello world  '.strip` は `'hello world'` (中央のスペースは残る) になります。\n\nバリエーション:\n- `strip` → 両端を削除\n- `lstrip` → 左 (先頭) だけ削除\n- `rstrip` → 右 (末尾) だけ削除\n\n似たメソッドに `chomp` がありますが、こちらは **末尾の改行を 1 つだけ** 削除する用途。`gets` で読み込んだ行末改行を消すときによく使います。\n\nさらに『中央の空白も全部消したい』なら正規表現で `gsub(/\\s/, '')` や `tr(' ', '')`、『複数空白を 1 つにまとめたい』なら `squeeze(' ')` などを使い分けます。フォーム入力の前処理、CSV のパース、URL の正規化など、現場で 1 日に何回も書くメソッドです。",
+      modelSelfExplanation: {
+        conclusion:
+          "メソッド名は `strip`。String#strip は文字列の前後に付いた空白系文字 (スペース・タブ・改行など) を削除した新しい文字列を返す。",
+        reason:
+          "Ruby の文字列正規化は用途別に細かいメソッドが揃っていて、`strip` は両端、`lstrip` / `rstrip` は片側、`chomp` は末尾の改行だけ、`squeeze` は連続文字の縮約、と役割を分けて持っている。strip は『削除対象が複数種類の空白文字』『削除位置が両端』というユースケースを 1 メソッドで簡潔に表すために標準で用意されている。",
+        example:
+          "フォーム入力の正規化で `email = params[:email].to_s.strip.downcase` のようにメソッドチェーンの中に組み込むのが定番。CSV の値処理、ログのトリミング、ユーザ名・氏名の表示前整形など『境界での空白除去』は実務で頻出。",
+        pitfall:
+          "全角スペース (U+3000) は Ruby 2.4+ では strip の対象に **含まれない** (\\s に該当しないため)。日本語入力で全角空白を取り除きたいなら `str.gsub(/[\\u{3000}\\s]+/, '')` のように明示するか、`str.gsub(/\\A[[:space:]]+|[[:space:]]+\\z/, '')` のように POSIX 文字クラスを使う。strip だけだと全角スペースが残るバグになりがち。",
+      },
       codeExample:
         '"  hello  ".strip       #=> "hello"\n"  hello  ".lstrip      #=> "hello  "\n"  hello  ".rstrip      #=> "  hello"\n"\\n\\t  hi \\n".strip    #=> "hi"\n\n# 文字列全体から空白を削除\n"a b c".gsub(/\\s/, "")  #=> "abc"\n"a b c".tr(" ", "")     #=> "abc"',
+      commonMistakes: [
+        "全角スペース (U+3000) は strip の対象外。日本語入力の正規化では `gsub(/[\\u{3000}\\s]+/, '')` のように明示する。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: String#strip",
+          url: "https://docs.ruby-lang.org/ja/latest/method/String/i/strip.html",
+        },
+      ],
     },
   },
   {
@@ -3642,6 +3663,12 @@ export const questions: Question[] = [
       "ArgumentError",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。split でカンマ区切り 3 要素配列、map(&:upcase) で各要素を大文字化。配列構造はそのまま、要素だけが変換される。",
+      "結合 (join) はしていないので 1 つの文字列にはならない。連結したいなら `.join('')` を追加する。",
+      "文字列のままにはならない。split が呼ばれた時点で結果は配列になり、map もまた配列を返す。",
+      "split / map / &:upcase はどれも標準のメソッドで、引数の型もマッチしているので例外は起きない。",
+    ],
     hints: [
       "`split(\",\")` でカンマ区切り配列に。",
       "`map(&:upcase)` で各要素を大文字化。",
@@ -3652,8 +3679,34 @@ export const questions: Question[] = [
         "split で文字列を配列化 → map(&:upcase) で各要素を大文字化。",
       reason:
         "`String#split(sep)` は区切り文字で配列分割。引数省略時は空白で分割。逆操作は `Array#join(sep)`。CSV っぽいパースで使うが、本格的な CSV は標準ライブラリ `csv` を使う。",
+      beginnerExplanation:
+        "2 ステップに分解して読みましょう。\n\n**Step 1: `'abc,def,ghi'.split(',')`**\n文字列を `,` で分割して配列を作ります。結果は `['abc', 'def', 'ghi']`。文字列の split は SQL の `STRING_SPLIT` や Python の `str.split` と同じ感覚です。\n\n**Step 2: `.map(&:upcase)`**\n配列の各要素に対して `upcase` を呼び、結果を新しい配列にまとめます。`&:upcase` は『シンボル `:upcase` を Proc 化してブロックとして渡す』短縮記法で、`{ |x| x.upcase }` と同じ意味になります。1 引数のメソッドを呼ぶだけのときに頻出する書き方です。\n\n結果として `['ABC', 'DEF', 'GHI']` が返ります。**map は配列の形を保ったまま、中身だけ変換** するメソッドなので、要素数は元と同じ 3 のままです。\n\n**逆操作** が必要なら `Array#join(',')` で配列を区切り文字付きの文字列に戻せます: `['ABC','DEF','GHI'].join(',')` → `'ABC,DEF,GHI'`。\n\n**本格的な CSV パース** には標準ライブラリの `csv` を使います。クォート対応や改行を含むセルなど split では扱えない仕様に対応しています。",
+      modelSelfExplanation: {
+        conclusion:
+          "結果は `['ABC', 'DEF', 'GHI']`。split がカンマで 3 要素配列に分解し、map が各要素を upcase で大文字化、map は配列構造を保つので最終形も 3 要素配列。",
+        reason:
+          "Ruby のコレクション操作は『データ構造を保ったまま要素を変換する map』『絞り込む select/filter』『畳み込む reduce』のように関数型的な命名で揃っている。今回の `split → map(&:upcase)` は『文字列を配列に分解 → 各要素を変換』というパイプライン的な書き方の典型で、`&:upcase` の Symbol-to-Proc 記法と組み合わせて 1 行で表現できる。",
+        example:
+          "現場では URL クエリのパース `query.split('&').map { |kv| kv.split('=') }`、CSV ライクなログ整形 `line.split(\"\\t\").map(&:strip)`、タグの正規化 `tags_str.split(',').map(&:downcase).map(&:strip).uniq` など、文字列を配列に展開してから各要素を加工するのは日常的に登場するパターン。",
+        pitfall:
+          "split は『区切り文字が連続するとき空文字を要素として含めるかどうか』が引数で変わる。`'a,,b'.split(',')` は `['a', '', 'b']`、`'a,b,'.split(',')` は `['a', 'b']` (末尾の空要素は削除)。末尾も残したいなら第 2 引数に -1 を渡す: `split(',', -1)`。さらに本格的な CSV (クォート・改行含む) は split では正しく扱えないので必ず標準ライブラリ `csv` を使う。",
+      },
       codeExample:
         '"abc,def,ghi".split(",")          #=> ["abc","def","ghi"]\n"  a   b   c  ".split             #=> ["a","b","c"] (連続空白で分割)\n\n# 結合\n["a","b","c"].join("-")           #=> "a-b-c"\n\n# CSV パース\nrequire "csv"\nCSV.parse("a,b,c\\n1,2,3")\n#=> [["a","b","c"], ["1","2","3"]]',
+      commonMistakes: [
+        "split の戻り値は末尾の空文字を切り捨てる仕様。末尾も残したいなら第 2 引数に -1 を渡す (`split(',', -1)`)。",
+        "本格的な CSV (クォート・改行・エスケープ) は split では扱えない。標準ライブラリ `csv` を使う。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: String#split",
+          url: "https://docs.ruby-lang.org/ja/latest/method/String/i/split.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Enumerable#map",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Enumerable/i/map.html",
+        },
+      ],
     },
   },
   {
@@ -3665,6 +3718,12 @@ export const questions: Question[] = [
     code: 'require "date"\nputs Date.new(2024, 1, 31) + 1',
     choices: ["2024-02-01", "2024-01-32", "ArgumentError", "2024-02-29"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。Date#+ は『n 日後』を返す。1月31日 + 1 日 = 2月1日。月またぎ・年またぎ・うるう年も自動で処理される。",
+      "Date は『1 月 32 日』のような無効日付を持たない。月の境界を超えると自動的に翌月へ繰り上がる。",
+      "整数の加算は Date クラスでサポートされた正規の演算なのでエラーにならない。Date - Date のような演算結果は Rational になる。",
+      "2024 年は閏年だが、1 月 31 日 + 1 日は 2 月 1 日。2 月 29 日になるのは『+ 29』の場合。",
+    ],
     hints: [
       "`Date + 整数` は日付加算。",
       "1月31日 + 1日 = 2月1日。",
@@ -3674,8 +3733,33 @@ export const questions: Question[] = [
       summary: "Date オブジェクト + 整数 は日付加算 (月またぎ・うるう年も正しく処理)。",
       reason:
         "`Date` は date 標準ライブラリ。`Date + n` は n 日後、`Date - other_date` は日数差 (Rational)。`Date.today`, `Date.parse`, `Date#strftime` も頻出。",
+      beginnerExplanation:
+        "Ruby の `Date` クラスは、**日付の計算を人間の感覚通りに正しく処理してくれる** 便利なクラスです。標準ライブラリなので `require 'date'` が必要です。\n\n基本的な使い方:\n- `Date.new(2024, 1, 31)` → 2024 年 1 月 31 日の Date オブジェクト\n- `Date + 整数` → その日数後の Date を返す\n- `Date - Date` → 2 つの日付の日数差 (Rational)\n- `Date.today` → 今日\n- `Date.parse('2024-12-25')` → 文字列をパース\n- `date.strftime('%Y/%m/%d')` → 任意フォーマットで文字列化\n\n今回のコード `Date.new(2024, 1, 31) + 1` は『2024 年 1 月 31 日の 1 日後』を求めます。1 月は 31 日まで、それ以降は 2 月なので、結果は **2024 年 2 月 1 日**。Ruby が月の境界を自動で扱ってくれるので、`'2024-01-32'` のような無効日付になることはありません。\n\n**Date, DateTime, Time の使い分け**:\n- `Date` → 日付のみ (時刻なし)。生年月日、締切日などに。\n- `Time` → 日付 + 時刻 + タイムゾーン。現在の Ruby ではこれが主役。\n- `DateTime` → 日付 + 時刻 (Time より古い、現在は非推奨気味)。\n\n迷ったら **Time** を使えば OK です。`Time.now` で現在時刻、`Time.parse` で文字列パース。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は `2024-02-01`。`Date + 整数` は『n 日後』を表す日付演算で、1月31日に 1 日を足すと月をまたいで 2 月 1 日になる。",
+        reason:
+          "Ruby の Date クラスはユリウス暦・グレゴリオ暦の変換まで含めて日付計算を内部で正しく扱う。`Date#+(Integer)` は『n 日後』、`Date#-(Date)` は『日数差 (Rational)』、`Date#-(Integer)` は『n 日前』と演算子オーバーロードで自然に書ける。月末・年末・うるう年などの境界も内部で考慮されるので、開発者は『日数加算したい』という意図だけ書けば正しい結果が得られる。",
+        example:
+          "現場では『3 日後に通知』のような営業日計算で `Date.today + 3`、『有効期限まであと何日』で `(expires_on - Date.today).to_i`、『先月の同じ日』で `date << 1` (Date#<< は『n か月前』)、『来月の同じ日』で `date >> 1` のように使う。Rails では ActiveSupport の `1.day.from_now`、`3.business_days.from_now` のような拡張も併用される。",
+        pitfall:
+          "Date の加算は『日数』ベース。『1 か月後』をしたいなら `date + 1` ではなく `date >> 1` (`Date#>>`) を使う。さらに『1 か月後に該当日が無い』場合 (1 月 31 日の 1 か月後 = 2 月 28/29 日) は自動で月末へ丸められるので、振替日・支払日のような業務日付では仕様を要確認。タイムゾーンが絡む場面では Date ではなく Time / ActiveSupport::TimeWithZone を使う。",
+      },
       codeExample:
         'require "date"\nDate.new(2024, 1, 31) + 1     #=> #<Date: 2024-02-01>\nDate.today                     # 今日\nDate.parse("2024-12-25")       # 文字列パース\nDate.today.strftime("%Y/%m/%d")\n\n# Date と DateTime と Time\n# Date     : 日付のみ\n# DateTime : 日付 + 時刻 (廃止予定的、Time 推奨)\n# Time     : 時刻 (タイムゾーン対応)',
+      commonMistakes: [
+        "『1 か月後』は `date + 30` ではなく `date >> 1`。30 日加算と 1 か月後は別物。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Date クラス",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Date.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: Date#+",
+          url: "https://docs.ruby-lang.org/ja/latest/method/Date/i/=2b.html",
+        },
+      ],
     },
   },
   {
@@ -3692,6 +3776,12 @@ export const questions: Question[] = [
       "Date.time",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`Time.now` は標準 Ruby に組み込みの『現在のシステムローカル時刻』。`require` 不要で動く。",
+      "Rails (ActiveSupport) 拡張のメソッド。`config.time_zone` を尊重するので Rails アプリ内では推奨だが、純 Ruby では未定義。",
+      "DateTime に `today` メソッドはあるが、これは『今日の DateTime』であり時刻部分は 0:00:00 になる。現在時刻ではない。",
+      "Date クラスに `time` メソッドは存在しない。Date は日付のみを扱うクラス。",
+    ],
     hints: [
       "標準 Ruby (Rails 無し) で動くもの。",
       "Rails の `Time.current` は ActiveSupport 拡張。",
@@ -3702,10 +3792,33 @@ export const questions: Question[] = [
         "Pure Ruby: `Time.now`。Rails 環境: `Time.current` (タイムゾーン考慮)。",
       reason:
         "`Time.now` はシステムローカル時刻。Rails の `Time.current` は `Time.zone.now` のラッパーで、`config.time_zone = 'Tokyo'` を尊重する。本番環境は常に UTC で保存、表示時に zone 変換が定石。",
+      beginnerExplanation:
+        "Ruby で現在時刻を取る方法は `Time.now` です。これは Ruby に最初から組み込まれている **Time クラス** のクラスメソッドで、追加で何も require せずに使えます。\n\n```ruby\nTime.now\n#=> 2024-05-24 14:30:12 +0900\n```\n\n返ってくる Time オブジェクトはシステムのタイムゾーン (TZ 環境変数や OS の設定) でフォーマットされます。\n\n**Rails アプリでは少し違います**。Rails には ActiveSupport が拡張した `Time.current` というメソッドがあって、これは `Time.zone.now` の別名です。Rails の `config.time_zone = 'Tokyo'` のようなアプリ全体のタイムゾーン設定を尊重するので、サーバの OS タイムゾーンに左右されない安全な現在時刻取得になります。\n\n**本番運用の定石**:\n- DB には **常に UTC で保存** (Rails のデフォルト)\n- 計算・比較も UTC ベースで行う\n- ユーザーに見せる直前で `Time.current` や `in_time_zone` でローカル時刻に変換\n\nDateTime クラスや Date クラスにも似たメソッドがありますが、現在は `Time` を使うのが推奨です。DateTime は古い API で、Time の方が高速かつタイムゾーン対応が充実しています。",
+      modelSelfExplanation: {
+        conclusion:
+          "純 Ruby で現在時刻を取るなら `Time.now`。Rails アプリ内では ActiveSupport が拡張した `Time.current` (= `Time.zone.now`) を使い、アプリ設定のタイムゾーンを尊重するのが定石。",
+        reason:
+          "`Time.now` は Ruby 組み込みで、OS のタイムゾーン (TZ 環境変数等) に基づいて現在時刻を返す。Rails では `config.time_zone` でアプリ全体のタイムゾーンを宣言できるが、`Time.now` はこれを無視する。そこで ActiveSupport が `Time.current` を提供し、内部で `Time.zone.now` を呼ぶことで、サーバの OS 設定に依存しないアプリ統一のタイムゾーン挙動を保証する。",
+        example:
+          "Rails アプリでは『DB は UTC で保存、表示は Time.zone.now や in_time_zone で変換』が定石。`created_at` を画面に出すなら `<%= post.created_at.in_time_zone.strftime('%Y/%m/%d %H:%M') %>`、現在時刻と比較するなら `Time.current > deadline` のように常に zone 付きで揃える。バックグラウンドジョブやログでも `Time.current` を使い、`Time.now` は基本書かない。",
+        pitfall:
+          "Rails で `Time.now` を直接使うと OS のタイムゾーン (本番は UTC、開発機は JST など) によって結果が変わってバグの温床。さらに DB との比較で『timezone がズレた値』を渡すと SQL のインデックスが効かないこともある。Rails 規約として `Time.current` / `Date.current` / `Time.zone.parse` を統一して使い、`Time.now` / `Date.today` は避けるという rubocop-rails のルールが用意されている (`Rails/TimeZone`)。",
+      },
       codeExample:
         'Time.now                  # システムローカル\nTime.now.utc              # UTC に変換\nTime.now.strftime("%Y-%m-%d %H:%M:%S")\n\n# Rails (ActiveSupport)\nTime.current              #=> Time.zone.now\nTime.zone.now\n1.hour.ago                # 1時間前\n3.days.from_now           # 3日後\nTime.zone                 #=> #<ActiveSupport::TimeZone: Tokyo>',
       commonMistakes: [
         "Rails で `Time.now` を直接使うとタイムゾーンが OS 依存になりバグの元。`Time.current` を使う。",
+        "rubocop-rails の `Rails/TimeZone` cop が `Time.now` を警告。CI で機械的に防ぐと安全。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: Time クラス",
+          url: "https://docs.ruby-lang.org/ja/latest/class/Time.html",
+        },
+        {
+          label: "Rails API: Time.current (ActiveSupport)",
+          url: "https://api.rubyonrails.org/classes/Time.html#method-c-current",
+        },
       ],
     },
   },
@@ -3718,6 +3831,12 @@ export const questions: Question[] = [
     code: 'File.open("/tmp/test.txt", "w") do |f|\n  f.puts "hello"\nend\n# ↑ ファイル書き込み\n\nputs File.read("/tmp/test.txt").chomp',
     choices: ["hello", "hello\\n", "nil", "Errno::ENOENT"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。puts で 'hello\\n' を書き込み、File.read で全文読み込み、chomp で末尾の改行 1 つを除去すると 'hello' が残り、それを最後の puts が出力する。",
+      "末尾の chomp によって改行が除去されるので、表示には改行は出ない。chomp を消すと puts 自身も改行を加えるので 2 つの改行が含まれた表示になる。",
+      "ブロック内でちゃんと書き込み完了し File.read もファイル存在を確認できるので nil にはならない。",
+      "ファイルは直前で生成されているので存在する。Errno::ENOENT は対象ファイルが無いときの例外。",
+    ],
     hints: [
       "`File.open` のブロック付き形式は自動でクローズ。",
       "`f.puts \"hello\"` は 'hello\\n' を書き込み。",
@@ -3728,8 +3847,34 @@ export const questions: Question[] = [
         "`File.open ... do |f|` のブロック付き形式は自動 close。File.read で一括読み込み + chomp で末尾改行除去。",
       reason:
         "ファイル操作はブロック付きで開くと例外時も自動 close。`'w'` 書き込み、`'r'` 読み込み、`'a'` 追記、`'r+'` 読み書き。`puts` は末尾改行付与、`print` は付与なし、`write` も付与なし。",
+      beginnerExplanation:
+        "Ruby のファイル操作の **基本パターン** が詰まったコードです。順を追って見ましょう。\n\n**1. ファイルを書き込みモード (`'w'`) で開く**\n```ruby\nFile.open('/tmp/test.txt', 'w') do |f|\n  f.puts 'hello'\nend\n```\n`File.open` の **ブロック付き形式** は『開いて、ブロック内で操作して、自動で閉じる』を 1 つにまとめてくれます。途中で例外が出ても確実にクローズされるので、ファイルディスクリプタリークの心配がありません。Python の `with open(...)`、JavaScript の try-with-resources パターンと同じ思想です。\n\nブロック内で `f.puts 'hello'` を呼ぶと、'hello' に **改行 \\n が付いて** ファイルに書き込まれます。puts は『put string with newline』の略です。改行をつけたくないなら `f.print` や `f.write` を使います。\n\n**2. 読み込み**\n```ruby\nFile.read('/tmp/test.txt')\n#=> \"hello\\n\"\n```\n`File.read` はファイル内容を一括で文字列として取得します。puts で書いた改行 \\n も入っています。\n\n**3. 末尾の改行を除去**\n`.chomp` で文字列末尾の改行 (1 つだけ) を取り除いて 'hello' に。\n\n**4. 出力**\n最後の `puts` が 'hello' を画面に出力します。\n\nまとめると **`hello`** (改行は chomp で除去済み、puts が新たに 1 つ改行を足して表示) が出力されます。",
+      modelSelfExplanation: {
+        conclusion:
+          "出力は `hello`。File.open のブロック付き形式で `'hello\\n'` を書き込み、File.read で読み戻し chomp で末尾改行を除去した結果を puts で表示するため、画面上は『hello』の 1 行になる。",
+        reason:
+          "ブロック付き `File.open` は『開く → 渡されたブロックを実行 → 例外の有無に関わらず close する』をひとまとめにする Ruby のイディオム (Resource Acquisition Is Initialization 相当)。これにより file descriptor リークが防げる。puts はレシーバ (IO や stdout) に文字列を書き、末尾に改行を補完するメソッド。chomp は末尾の改行 1 つを除去する。これらの組み合わせで『書き込み → 読み戻し → 整形 → 表示』というファイル操作の一連の流れになる。",
+        example:
+          "実務では設定ファイルやログの読み書き、テンポラリファイル経由のデータ受け渡し、CSV/JSON のエクスポートなど多くの場面で File.open のブロック形式を使う。Rails アプリでも `Tempfile.open` や `CSV.open` などブロック形式の API が標準で揃っており、利用者は close を忘れる心配がない。",
+        pitfall:
+          "ブロック無しの `f = File.open(path, 'w'); f.puts 'x'` のような書き方は、例外が出ると close されないままになりリソースリーク・ロック残留の原因になる。例外ハンドリングが必要でも `File.open(path, 'w') do |f| ... end` のブロック形式に統一するのが安全。さらに大きなファイルを `File.read` で一括読み込むとメモリを大量消費するので、ログのような巨大ファイルは `File.foreach` で 1 行ずつ処理する。",
+      },
       codeExample:
         '# 書き込み (自動 close)\nFile.open("data.txt", "w") do |f|\n  f.puts "line1"     # 改行つき\n  f.print "line2"    # 改行なし\nend\n\n# 1 行ずつ読み込み (大きいファイル向け)\nFile.foreach("data.txt") do |line|\n  puts line.chomp\nend\n\n# 一括\ncontent = File.read("data.txt")\nlines   = File.readlines("data.txt")  # 行配列',
+      commonMistakes: [
+        "ブロック無しで `File.open` してから close 忘れはリソースリークの定番。常にブロック付きで書く。",
+        "大きいファイルを `File.read` で一括読みするとメモリを大量消費する。行処理なら `File.foreach`。",
+      ],
+      references: [
+        {
+          label: "Ruby 公式リファレンス: File クラス",
+          url: "https://docs.ruby-lang.org/ja/latest/class/File.html",
+        },
+        {
+          label: "Ruby 公式リファレンス: IO#puts / IO#print / IO#write",
+          url: "https://docs.ruby-lang.org/ja/latest/method/IO/i/puts.html",
+        },
+      ],
     },
   },
   {
