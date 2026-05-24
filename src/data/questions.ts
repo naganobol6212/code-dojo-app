@@ -2633,6 +2633,12 @@ export const questions: Question[] = [
       "GET /posts/search (search)",
     ],
     answerIndex: 3,
+    choiceExplanations: [
+      "標準 7 アクションの 1 つ。`resources :posts` で自動生成される。",
+      "標準 7 アクションの 1 つ (`new` アクション、新規作成フォーム表示)。",
+      "標準 7 アクションの 1 つ (`show` アクション、個別表示)。",
+      "正解。`search` は RESTful 標準アクションには含まれない。`collection do; get :search; end` のように明示的に追加する必要がある。",
+    ],
     hints: [
       "`resources` は RESTful な 7 アクションを生成。",
       "index, show, new, create, edit, update, destroy の 7 つ。",
@@ -2643,8 +2649,30 @@ export const questions: Question[] = [
         "`resources` は 7 つの RESTful ルートを生成。カスタムは別途。",
       reason:
         "生成される 7 つ: index (GET /), show (GET /:id), new (GET /new), create (POST /), edit (GET /:id/edit), update (PATCH/PUT /:id), destroy (DELETE /:id)。`rails routes` で確認可。",
+      beginnerExplanation:
+        "**`resources :posts`** と書くだけで、Rails は **RESTful な 7 つの標準アクション** に対応するルートと URL ヘルパーを自動生成します。\n\n**生成される 7 アクション**:\n\n| HTTP メソッド | URL | アクション | 用途 |\n|---|---|---|---|\n| GET | /posts | index | 一覧 |\n| GET | /posts/:id | show | 詳細 |\n| GET | /posts/new | new | 新規作成フォーム |\n| POST | /posts | create | 新規作成 |\n| GET | /posts/:id/edit | edit | 編集フォーム |\n| PATCH/PUT | /posts/:id | update | 更新 |\n| DELETE | /posts/:id | destroy | 削除 |\n\n**確認**: `bin/rails routes -g posts` で生成されたルートを一覧表示。\n\n**カスタムアクション** を追加したいときは `collection` / `member` ブロック:\n```ruby\nresources :posts do\n  collection do\n    get :search           # GET /posts/search (id 不要)\n  end\n  member do\n    post :publish         # POST /posts/:id/publish (id あり)\n  end\nend\n```\n\n**一部だけ生成**:\n```ruby\nresources :posts, only:   [:index, :show]   # 2 つだけ\nresources :posts, except: [:destroy]         # destroy 以外\n```\n\n**単数形 `resource`** (id 無し、自分のプロフィールなど 1 つだけのリソース):\n```ruby\nresource :profile  # /profile (show/edit/update/destroy のみ、index なし)\n```\n\n**RESTful 設計の利点**: HTTP メソッドとアクションの対応が標準化され、ルート定義が短く、新規参加者でも『どこに何があるか』が直感的に分かります。`search` のような検索機能も無理に独自アクションを増やさず、`?q=foo` のクエリパラメータで index に渡す方が RESTful です。",
+      modelSelfExplanation: {
+        conclusion:
+          "自動生成されないのは `GET /posts/search`。`resources` が生成するのは RESTful 標準 7 アクション (index/show/new/create/edit/update/destroy) で、search はその外側にあるカスタムアクション。",
+        reason:
+          "Rails は REST 原則 (リソースに対する CRUD + 一覧/新規フォーム表示) を強制することで、ルート設計の一貫性と新規参加者の学習コスト低減を実現している。`resources :posts` 1 行で 7 ルート + 対応する URL ヘルパー (`posts_path`, `post_path(@post)`, `new_post_path` 等) を自動生成し、独自アクションが必要なら `collection` (id 不要) や `member` (id 必要) ブロックで明示的に追加する設計。",
+        example:
+          "ブログアプリの基本 CRUD は `resources :posts` で完結する。検索が必要なら `resources :posts do; collection do; get :search; end; end` で `/posts/search` を追加するか、より RESTful には index アクションに `?q=keyword` のクエリパラメータを渡して `Post.where('title LIKE ?', \"%#{q}%\")` で絞り込む方式 (URL も `/posts?q=ruby` で済む)。ネストしたリソースなら `resources :posts do; resources :comments; end` で `/posts/:post_id/comments` も生成。",
+        pitfall:
+          "アクションを乱発して `member do; get :share; post :like; delete :unlike; ...; end` のように Fat Routes になると、本来別リソースとして切り出すべきものが混在する。例えば『いいね』は `resources :likes` として独立したリソースに分けるのが REST 的に綺麗。さらに `match :all, via: :all` のようなルートはセキュリティリスクなので避ける (HTTP メソッドを明示する)。",
+      },
       codeExample:
         "# 7つすべて生成\nresources :posts\n\n# 一部だけ生成\nresources :posts, only:   [:index, :show]\nresources :posts, except: [:destroy]\n\n# カスタムアクション\nresources :posts do\n  collection do\n    get :search           # /posts/search\n  end\n  member do\n    post :publish         # /posts/:id/publish\n  end\nend\n\n# 単数形 resource (id 無し、1リソース用)\nresource :profile         # /profile (show/edit/update/destroy)",
+      commonMistakes: [
+        "member / collection を使いすぎる Fat Routes。独立リソースに切り出す方が REST 的。",
+        "`match :all, via: :all` のような曖昧ルートはセキュリティリスク。HTTP メソッドを明示する。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Routing — Resource Routing (公式)",
+          url: "https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default",
+        },
+      ],
     },
   },
   {
@@ -2661,6 +2689,12 @@ export const questions: Question[] = [
       "session[:id]",
     ],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`params` は Hash 風のオブジェクト (ActionController::Parameters) で、角括弧 + シンボルで値を取り出す。",
+      "`params.id` のようなメソッドアクセスはサポートされない。Hash 風の `[]` アクセスが標準。",
+      "`request` には HTTP リクエスト全体の情報 (URL、ヘッダー、IP 等) が入るが、URL パラメータには直接アクセスしない。",
+      "`session` はクッキーやサーバ側に保存された状態 (ログイン情報など) で、URL のパスパラメータとは別物。",
+    ],
     hints: [
       "params は ActionController::Parameters のインスタンス。",
       "Hash のように `[:キー]` で取り出します。",
@@ -2670,8 +2704,31 @@ export const questions: Question[] = [
       summary: "params[:id] で URL のパスパラメータを取得。",
       reason:
         "params には URL パラメータ・クエリパラメータ・POST ボディが統合されて入る。`params[:id]` は常に文字列なので、数値が欲しい時は `params[:id].to_i`、ただし `Post.find(params[:id])` は自動で変換してくれる。",
+      beginnerExplanation:
+        "**`params`** は Rails コントローラから **URL・クエリパラメータ・POST ボディの全パラメータ** にアクセスする統合インターフェースです。\n\n**取得元の種類**:\n```\nURL パスパラメータ:  /posts/42        → params[:id] = '42'\nクエリパラメータ:    /posts?q=ruby    → params[:q]  = 'ruby'\nフォーム POST ボディ: name=Alice&age=20 → params[:name] = 'Alice'\nJSON POST:           {\"user\":{...}}    → params[:user] = {...}\n```\n\nすべて同じ `params[...]` でアクセスでき、Rails が裏で振り分けてくれます。\n\n**型**: `ActionController::Parameters` (Hash ライクだが Hash ではない、安全機能あり)\n\n**注意点**:\n1. **値は常に文字列** (`params[:id]` は `'42'`、Integer ではない)\n2. ただし `Post.find(params[:id])` は内部で `to_i` してくれる\n3. ネストアクセス: `params[:user][:email]` または `params.dig(:user, :email)` (nil 安全)\n\n**Strong Parameters** (必須機能、後の問題で詳細):\n```ruby\ndef post_params\n  params.require(:post).permit(:title, :body)\nend\n```\n\n**`params` vs `session` vs `cookies` vs `request`**:\n- `params` — 今回のリクエストのパラメータ (URL / フォーム / JSON)\n- `session` — サーバ側の一時状態 (ログイン中の user_id など)、リクエスト間で保持\n- `cookies` — クライアント側に保存されたデータ\n- `request` — HTTP リクエスト全体の情報 (`request.ip`, `request.user_agent`)\n\nそれぞれ役割が違うので使い分けます。",
+      modelSelfExplanation: {
+        conclusion:
+          "URL `/posts/42` の `42` は `params[:id]` で取得する。Rails のコントローラでは URL パスパラメータ・クエリパラメータ・POST ボディが全て `params` に統合され、Hash 風の `[]` アクセスで取り出せる。",
+        reason:
+          "Rails はリクエストの各種パラメータ源 (パスから抽出された動的部分、`?key=value` の query string、POST ボディの form-encoded データ / JSON) を `params` という単一のオブジェクト (ActionController::Parameters) にマージして提供する。これにより開発者は値がどこから来たかを意識せず、シンプルな API でアクセスできる。Hash ではなく専用クラスなのは Strong Parameters のセキュリティ機能 (require / permit) を実装するため。",
+        example:
+          "`PostsController#show` では `@post = Post.find(params[:id])` で URL からの ID を取って Model を引く。検索なら `@posts = Post.where('title LIKE ?', \"%#{params[:q]}%\")`。フォーム送信なら `@post = Post.new(post_params)` で Strong Parameters を経由して安全に大量代入。ログイン処理なら `user = User.find_by(email: params[:email])` でメール検索。",
+        pitfall:
+          "params の値は常に文字列なので、数値比較で `if params[:id] == 1` は失敗する (左辺が String、右辺が Integer)。`Post.find` のように内部で型変換するメソッドを使うか、明示的に `params[:id].to_i` する。さらに params を Model に丸ごと渡す (`Post.new(params[:post])`) と Mass Assignment 脆弱性になるので、必ず Strong Parameters (`permit`) を経由する。`params[:user][:email]` でネストアクセス時に user 自体が nil だと NoMethodError なので `params.dig(:user, :email)` の方が安全。",
+      },
       codeExample:
         "class PostsController < ApplicationController\n  def show\n    @post = Post.find(params[:id])  # /posts/42 → 42\n  end\n\n  def create\n    # params[:post] でフォーム全体取得\n    @post = Post.new(post_params)\n  end\n\n  private\n\n  def post_params\n    params.require(:post).permit(:title, :body)\n  end\nend",
+      commonMistakes: [
+        "params の値は文字列。`if params[:id] == 1` は失敗する。to_i するか find に任せる。",
+        "params を直接 Model に渡すと Mass Assignment 脆弱性。必ず Strong Parameters 経由。",
+        "ネストアクセスは `params.dig(...)` で nil 安全に。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Action Controller — Parameters (公式)",
+          url: "https://guides.rubyonrails.org/action_controller_overview.html#parameters",
+        },
+      ],
     },
   },
   {
@@ -2682,6 +2739,12 @@ export const questions: Question[] = [
     question: "コントローラから別 URL にリダイレクトするメソッドは？",
     choices: ["redirect_to", "render", "forward", "goto"],
     answerIndex: 0,
+    choiceExplanations: [
+      "正解。`redirect_to` は HTTP 302 (または 303) レスポンスを返し、ブラウザに『この URL に再リクエストして』と指示する。URL バーも変わる。",
+      "`render` は同じレスポンス内でテンプレートを描画するだけで、URL は変わらない (リダイレクトではない)。フォーム失敗時の再描画などに使う。",
+      "`forward` は Rails には存在しない (Java EE の RequestDispatcher.forward などとは別物)。",
+      "`goto` は Rails のメソッドではない。BASIC 言語の構文を思い起こさせるが Ruby/Rails には無い。",
+    ],
     hints: [
       "HTTP 302 を返してブラウザを別URLに飛ばします。",
       "`render` は同じレスポンス内でテンプレートを描画するメソッド。",
@@ -2691,10 +2754,35 @@ export const questions: Question[] = [
       summary: "`redirect_to` は HTTP リダイレクト、`render` は描画。",
       reason:
         "両者は混同しやすい: redirect_to は新しい HTTP リクエストを発生させ URL も変わる (PRG パターンで使用)。render は同一リクエスト内で別テンプレートを表示するだけで URL は変わらない。",
+      beginnerExplanation:
+        "**`redirect_to`** と **`render`** は **混同しやすい 2 つの『画面遷移』メソッド** ですが、本質的に違います。\n\n**`redirect_to`** — HTTP リダイレクト (新リクエスト発生)\n```ruby\nredirect_to @post                # /posts/1 へリダイレクト\nredirect_to root_path            # / へ\nredirect_to @post, status: :see_other  # 303 See Other (DELETE 後の推奨)\n```\nブラウザは Location ヘッダーを見て **新しい GET リクエスト** を発行する。URL バーも変わる。\n\n**`render`** — 同一リクエスト内でテンプレート描画\n```ruby\nrender :new                      # new.html.erb を描画\nrender 'shared/error'            # 別ディレクトリ\nrender json: { ok: true }        # JSON レスポンス\nrender plain: 'OK', status: 200  # プレーンテキスト\n```\n**URL は変わらない** (例えば POST /posts のままで new.html.erb を表示)。\n\n**典型的な PRG パターン** (Post-Redirect-Get):\n```ruby\ndef create\n  @post = Post.new(post_params)\n  if @post.save\n    redirect_to @post, notice: '作成しました'\n    # /posts (POST) → 302 → /posts/1 (GET)\n    # ユーザーがリロードしても POST 再送信されない\n  else\n    render :new, status: :unprocessable_entity\n    # /posts (POST) のまま new.html.erb で @post.errors を表示\n  end\nend\n```\n\n**Turbo (Rails 7+) の注意**: フォーム失敗時に `status: :unprocessable_entity` (422) を明示しないと Turbo が正しくフォーム再表示しません (デフォルトの 200 では Turbo がリダイレクト扱いしようとする)。\n\n**DELETE 後は 303 推奨**: `redirect_to @posts, status: :see_other`。302 だと一部ブラウザが DELETE を GET に変換してくれず、Method Not Allowed になることがあるため。\n\n**`redirect_back`** で『元の URL に戻る』:\n```ruby\nredirect_back(fallback_location: root_path)\n# HTTP_REFERER があればそれに、なければ root_path に\n```",
+      modelSelfExplanation: {
+        conclusion:
+          "コントローラから別 URL にリダイレクトするメソッドは `redirect_to`。HTTP 302/303 のレスポンスを返してブラウザに『この URL に再リクエストしろ』と指示し、URL バーも変わる。`render` は同一レスポンス内でテンプレートを描画するだけで URL は変わらない。",
+        reason:
+          "Web アプリの画面遷移には『新リクエストでサーバ往復させる (redirect)』と『今のレスポンスで別画面を表示する (render)』の 2 種類があり、Rails はそれぞれ専用のメソッドを提供する。redirect は PRG (Post-Redirect-Get) パターンで POST 後のリロード時に再 POST されないようにする、URL を共有可能にする、などのメリットがある。render は同じリクエスト内で柔軟に表示内容を切り替えられ、特にフォーム失敗時の再表示 (入力値とエラーをそのまま保持) で必須。",
+        example:
+          "PostsController#create が成功したら `redirect_to @post, notice: '作成しました'` で `/posts/1` に遷移 (URL バーが変わる、flash メッセージも次のリクエストで表示)。失敗したら `render :new, status: :unprocessable_entity` で同じ URL (POST /posts) のまま new.html.erb を表示し、`@post.errors` をフォームに表示する。これが Rails 流の create アクションの定型。検索結果なら GET /posts?q=ruby で render :index、ログイン成功なら `redirect_to dashboard_path` で /dashboard へ、と使い分ける。",
+        pitfall:
+          "render と redirect_to を同じアクションで両方呼ぶと `AbstractController::DoubleRenderError`。両方分岐の最後に return を入れるか、early return パターンで防ぐ。Turbo (Rails 7+) では form 失敗時の render で `status: :unprocessable_entity` を付け忘れると Turbo の挙動が壊れる (200 だとリダイレクトと誤認識)。DELETE 後の redirect は `status: :see_other` (303) が安全 (302 だと一部ブラウザが DELETE を GET に変換せず Method Not Allowed)。さらに redirect_to params[:url] のようにユーザー入力をそのまま渡すと Open Redirect 脆弱性なので、許可リスト方式で検証する。",
+      },
       codeExample:
         '# POST /posts → /posts/1 (PRG: Post-Redirect-Get)\ndef create\n  @post = Post.create(post_params)\n  if @post.persisted?\n    redirect_to @post, notice: "作成しました"\n  else\n    render :new, status: :unprocessable_entity\n  end\nend\n\n# その他\nredirect_to root_path\nredirect_back(fallback_location: root_path)\nredirect_to @post, status: :see_other  # 303 (DELETE 後の推奨)',
       commonMistakes: [
         "Turbo (Rails 7+) では form 失敗時は `status: :unprocessable_entity` を付けないと正しくフォーム再表示されない。",
+        "DELETE 後の redirect は 303 See Other (`status: :see_other`) が安全。",
+        "redirect_to params[:url] は Open Redirect 脆弱性。許可リストで検証する。",
+        "render と redirect_to を同じアクションで両方呼ぶと DoubleRenderError。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Action Controller — Rendering (公式)",
+          url: "https://guides.rubyonrails.org/layouts_and_rendering.html",
+        },
+        {
+          label: "OWASP: Unvalidated Redirects and Forwards",
+          url: "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+        },
       ],
     },
   },
@@ -2707,6 +2795,12 @@ export const questions: Question[] = [
       "コントローラで、全アクション実行前にユーザー認証を行う Rails 標準の仕組みは？",
     choices: ["before_filter", "before_action", "around_filter", "after_action"],
     answerIndex: 1,
+    choiceExplanations: [
+      "`before_filter` は Rails 4 で deprecated、5.0 で完全削除。現在の名前は `before_action`。",
+      "正解。`before_action :method` でアクション実行前にメソッドを呼ぶ Rails 5+ の標準。`only:` / `except:` でアクションを絞れる。",
+      "`around_filter` も Rails 5 で `around_action` に改名された。古い名前。",
+      "`after_action` は『アクション実行後』のフック。実行前のフィルタとしては使えない (例外時にスキップされる)。",
+    ],
     hints: [
       "Rails 4 以前は別名でした。",
       "`before_*` 系のメソッドです。",
@@ -2716,8 +2810,31 @@ export const questions: Question[] = [
       summary: "Rails 5+ は `before_action` が標準 (`before_filter` は廃止)。",
       reason:
         "`before_action :method` でアクション実行前にフィルターを実行。`only:` / `except:` で対象アクションを絞れる。複数連結可能。`after_action`, `around_action` も同様。",
+      beginnerExplanation:
+        "**`before_action`** は、コントローラのアクション実行前に共通処理を差し込む Rails の DSL です。\n\n**典型例**:\n```ruby\nclass PostsController < ApplicationController\n  before_action :authenticate_user!                          # 全アクション\n  before_action :set_post, only: %i[show edit update destroy]  # 4 つだけ\n  before_action :authorize!, only: %i[edit update destroy]   # 3 つだけ\n\n  def show; end\n  def edit; end\n  # ...\n\n  private\n\n  def set_post\n    @post = Post.find(params[:id])\n  end\n\n  def authorize!\n    redirect_to root_path unless @post.user == current_user\n  end\nend\n```\n\n**よく使うパターン**:\n- **認証**: `before_action :authenticate_user!` (Devise の定番)\n- **共通リソース取得**: `before_action :set_post, only: %i[show edit update destroy]` で `@post = Post.find(params[:id])`\n- **権限チェック**: `before_action :authorize!`\n- **ログ・計測**: 開始時刻記録など\n\n**`only:` / `except:` でアクションを絞る**:\n```ruby\nbefore_action :ensure_admin, only: [:destroy]\nbefore_action :load_categories, except: [:index]\n```\n\n**処理を中断したい場合** (例: 認証失敗時): `redirect_to` または `render` を呼ぶと **後続のアクションは実行されない** (Rails が自動でスキップ)。\n```ruby\ndef authorize!\n  unless current_user.admin?\n    redirect_to root_path, alert: '権限がありません'\n    # ↑ ここで止まる。show アクション本体は実行されない\n  end\nend\n```\n\n**関連の仲間**:\n- `before_action` — アクション前\n- `after_action` — アクション後 (例外時はスキップ)\n- `around_action` — アクションを囲む (`yield` で本体を実行)\n- `skip_before_action :auth, only: [:login]` — 親クラスのフィルタをスキップ\n\n**注意**: Rails 4 以前は `before_filter` という名前でしたが、Rails 5 で完全削除されました。古いコードを見たら `before_action` に置き換えます。",
+      modelSelfExplanation: {
+        conclusion:
+          "Rails 5+ の標準は `before_action`。`before_action :method_name` でコントローラのアクション実行前にメソッドを呼び、認証・権限チェック・共通リソース取得などの横断的な処理を宣言的に書ける。",
+        reason:
+          "`before_action` は AOP (Aspect Oriented Programming) 的な横断的関心事 (cross-cutting concerns) をコントローラに DRY に追加する仕組み。同じ前処理を各アクションの冒頭にコピペする代わりに、クラスレベルで宣言すれば自動的に適用される。`only:` / `except:` で適用範囲を絞れ、`redirect_to` / `render` を呼べば後続アクションを中断できる。Rails 4 以前は `_filter` 系の名前だったが、Rails 5 で `_action` 系に統一された (filter は『絞り込み』のニュアンスが強すぎたため)。",
+        example:
+          "Devise なら `before_action :authenticate_user!` で全アクション認証必須に。Pundit や CanCanCan などの認可 gem も `before_action :authorize_resource` で全アクションに権限チェックを掛ける。共通の Model 取得は `before_action :set_post, only: %i[show edit update destroy]` で 4 つのアクションから DRY に。さらに `skip_before_action :authenticate_user!, only: [:index, :show]` で公開ページだけ認証スキップ、というのも頻出。",
+        pitfall:
+          "`before_action` で `@post = Post.find(params[:id])` のように Model 取得を共通化するのは便利だが、全アクションで毎回 DB を引くオーバーヘッドが発生する (only で必要なアクションだけに絞る)。さらに before_action 内で例外が出るとレスポンスが返らずユーザに 500 が見える、callback の順序依存で挙動が変わる、複数 before_action で先行のリダイレクトが効くか分かりにくい、などの注意点もある。継承で親クラスのフィルタが効きすぎる場合は `skip_before_action` で個別解除する。",
+      },
       codeExample:
         "class PostsController < ApplicationController\n  before_action :authenticate_user!\n  before_action :set_post, only: %i[show edit update destroy]\n  before_action :authorize!, only: %i[edit update destroy]\n\n  def show; end\n  def edit; end\n\n  private\n\n  def set_post\n    @post = Post.find(params[:id])\n  end\n\n  def authorize!\n    redirect_to root_path unless @post.user == current_user\n  end\nend",
+      commonMistakes: [
+        "before_action を全アクションに掛けて毎回 DB 引く。必要なアクションだけ only: で絞る。",
+        "Rails 4 以前の `before_filter` を使い続ける。Rails 5+ では削除済み。",
+        "before_action 内の例外が 500 エラーで露出。重要な処理は begin/rescue で。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Action Controller — Filters (公式)",
+          url: "https://guides.rubyonrails.org/action_controller_overview.html#filters",
+        },
+      ],
     },
   },
   {
@@ -2744,10 +2861,34 @@ export const questions: Question[] = [
         "Strong Parameters は permit で許可したキーだけを通し、Mass Assignment 攻撃を防ぐ。",
       reason:
         "Rails 3 までは Model 側で `attr_accessible` で防いでいたが、Controller 責務に移った。`require` で必須キー、`permit` で許可キーを宣言。",
+      beginnerExplanation:
+        "**Strong Parameters** は Rails 4 で導入された **Mass Assignment 脆弱性を防ぐ仕組み** です。\n\n**Mass Assignment 脆弱性とは**:\n```ruby\n# ❌ 危険なコード (Strong Parameters なし)\nUser.new(params[:user])\n```\nフォームには `name`, `email` しかなくても、攻撃者が DevTools で `<input name=\"user[admin]\" value=\"true\">` を追加して送信すると、`User.new(name: ..., email: ..., admin: true)` で **管理者権限が付与されてしまう** という古典的脆弱性。GitHub も昔これでやられました。\n\n**Strong Parameters の書き方**:\n```ruby\ndef create\n  @user = User.new(user_params)\n  # ...\nend\n\nprivate\n\ndef user_params\n  params.require(:user).permit(:name, :email, :age)\n  #     必須キー       許可属性 (これ以外は黙って捨てられる)\nend\n```\n\n**`require`**: 親キー (`params[:user]`) を必須化。無ければ `ActionController::ParameterMissing` 例外。\n**`permit`**: 許可する属性を列挙。記載のないキーは捨てられる + `Unpermitted parameter` という warning ログ。\n\n**ネスト構造**:\n```ruby\nparams.require(:post).permit(\n  :title, :body,                  # 単純な属性\n  tag_ids: [],                     # 配列\n  comments_attributes: [:body]     # ネスト Hash (accepts_nested_attributes_for)\n)\n```\n\n**配列の中身**:\n```ruby\npermit(tag_ids: [])           # 配列 (整数や文字列)\npermit(role_ids: [], skills: [:name, :level])  # 配列 of Hash\n```\n\n**Rails 7.1+ の `params.expect`**:\n```ruby\nparams.expect(user: [:name, :email])\n# require + permit を 1 行で書ける新 API\n```\n\n**🚨 絶対に書いてはいけない**:\n```ruby\nparams[:user].permit!     # 全許可 = Mass Assignment 脆弱性を再導入\nparams.permit!             # 同上\n```\n\n**実践運用**:\n- 各 Model 用の `xxx_params` プライベートメソッドを作る (Rails の generator も自動生成)\n- 新しいカラム追加時は permit リストの更新を忘れない (テストで保存値を検証する習慣)\n- Brakeman などの静的解析で permit! 等の危険な使い方を検出",
+      modelSelfExplanation: {
+        conclusion:
+          "仕組みの名前は **Strong Parameters**。`params.require(:user).permit(:name, :email)` のように書き、許可したキーだけを通して Mass Assignment 脆弱性を防ぐ Rails 4+ の標準。",
+        reason:
+          "Rails 3 以前は Model 側で `attr_accessible` / `attr_protected` を使って属性ホワイトリスト / ブラックリストを定義していたが、『どの属性を許可するかは Controller 側の責務 (= リクエストごとに違う)』という設計判断で Rails 4 から Strong Parameters に移行した。`require` で親キーの存在を強制 (例外で fail-fast)、`permit` で許可する属性を列挙、その他はサイレントに削除 (warning ログのみ)。これにより『フォームで送れる属性をコントローラで明示する』というポリシーが標準化され、attribute の追加忘れによる脆弱性混入を体系的に防げる。",
+        example:
+          "ユーザ登録の create で `def user_params; params.require(:user).permit(:name, :email, :password); end` として private で定義し、`@user = User.new(user_params)` で渡す。`admin` フラグや `role_id` など権限関係の属性は絶対に permit しない (管理画面では別の admin_params で許可リストを変える)。ネストフォーム (記事 + タグ + コメント) なら `permit(:title, :body, tag_ids: [], comments_attributes: [:body])` で配列 / ネスト Hash も明示。",
+        pitfall:
+          "`permit!` (引数なし) で全許可は **Mass Assignment 脆弱性を再導入** するので絶対避ける。Brakeman などのセキュリティ静的解析を CI に入れて検出するのが現実的。新しいカラムを追加した時 permit リストの更新を忘れると『フォーム送ったのに保存されない』バグになる (warning ログには出るが見落としやすい)。Rails 7.1+ の `params.expect` は require + permit を 1 行で書ける新 API で、より厳密 (キー欠落で即エラー)。",
+      },
       codeExample:
         "def create\n  @user = User.new(user_params)\n  ...\nend\n\nprivate\n\ndef user_params\n  params.require(:user).permit(:name, :email, :age)\nend\n\n# ネスト\nparams.require(:post).permit(\n  :title, :body,\n  tag_ids: [],                  # 配列\n  comments_attributes: [:body]  # ネスト Hash\n)\n\n# Rails 7.1+ params.expect\nparams.expect(user: [:name, :email])",
       commonMistakes: [
         "`permit!` (引数なし) で全許可は Mass Assignment 脆弱性を再導入してしまうので絶対避ける。",
+        "新しいカラム追加時に permit リストの更新を忘れる。warning ログに出るが見落としやすい。",
+        "管理画面と一般画面で同じ params メソッドを使い回す → 権限がエスカレートする。別メソッドにする。",
+      ],
+      references: [
+        {
+          label: "Rails Guides: Action Controller — Strong Parameters (公式)",
+          url: "https://guides.rubyonrails.org/action_controller_overview.html#strong-parameters",
+        },
+        {
+          label: "OWASP: Mass Assignment Cheat Sheet",
+          url: "https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html",
+        },
       ],
     },
   },
