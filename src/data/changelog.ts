@@ -17,6 +17,19 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-26-c",
+    date: "2026-05-26",
+    title: "📚 Study Guide を 6 章 → 14 章に拡充 (Ruby 7 + JS 7)",
+    badge: "content",
+    highlights: [
+      "💎 Ruby 入門: +4 章 (例外処理 / メタプログラミング / テスト / Gem と Bundler)",
+      "🟨 Modern JavaScript: +4 章 (配列とイテレーション / オブジェクトとクラス / ESM モジュール / TypeScript への橋渡し)",
+      "各章 5〜10 分の読了時間、学習目標 3 つ、コード例 3 節、要点まとめ、関連クイズへのリンク付き",
+      "公式リファレンス (Ruby docs / MDN / TS Handbook 等) へのリンクで深堀り導線",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-26-b",
     date: "2026-05-26",
     title: "🛠️ CRUD 実践課題を 3 つ追加 (認証 / アップロード / API)",
