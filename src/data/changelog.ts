@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-24-n",
+    date: "2026-05-24",
+    title: "ActiveRecord ar-006〜010 の解説拡充 (Phase 2)",
+    badge: "content",
+    highlights: [
+      "ar-006 (validates) / ar-007 (scope) / ar-008 (save vs save!) / ar-009 (where と SQL Injection 対策) / ar-010 (callbacks)",
+      "バリデーション・クエリ DSL・トランザクション・ライフサイクルフックの中核を実例ベースで深掘り",
+      "ActiveRecord 進捗 10/23",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-24-m",
     date: "2026-05-24",
     title: "ActiveRecord カテゴリの解説拡充スタート (ar-001〜005)",
