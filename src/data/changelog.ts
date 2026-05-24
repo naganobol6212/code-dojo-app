@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-26-e",
+    date: "2026-05-26",
+    title: "🐍 Study Guide に Python を追加 (7 章)",
+    badge: "content",
+    highlights: [
+      "🐍 Python の地図 — 静かで強い言語 (新規ガイド、7 章 / 約 60 分)",
+      "1. 値と構文 / 2. コレクションと内包表記 / 3. 関数とデコレータ / 4. クラスと OOP / 5. 例外と with / 6. イテレータと Generator / 7. モダン Python (型ヒント・pytest・uv)",
+      "Ruby / JS との falsy 値・スライス・f-string・nonlocal の違いを実例で対比",
+      "@dataclass / @contextmanager / yield from / itertools / Protocol などモダン Python の主要機能を解説",
+      "uv / poetry / pip+venv / pyproject.toml / ruff / mypy の現代開発環境を一望",
+      "Guide 総数: 3 → 4 (Ruby / JavaScript / TypeScript / Python)、章総数: 21 → 28",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-26-d",
     date: "2026-05-26",
     title: "🔷 Study Guide に TypeScript を追加 (7 章)",
