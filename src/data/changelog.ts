@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-c",
+    date: "2026-05-25",
+    title: "Ruby Advanced adv-011〜015 の解説拡充 (Phase 3)",
+    badge: "content",
+    highlights: [
+      "adv-011 (&blk でブロック受け取り) / adv-012 (モンキーパッチ) / adv-013 (Ruby の GC) / adv-014 (case/in パターンマッチング) / adv-015 (instance_eval)",
+      "Ruby のメタプログラミングと最新機能 (Ruby 3.0+ パターンマッチ) を深掘り",
+      "進捗: 121/149 問 (81%)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-b",
     date: "2026-05-25",
     title: "Ruby Advanced adv-006〜010 の解説拡充 (Phase 2)",
