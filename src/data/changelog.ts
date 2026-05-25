@@ -17,6 +17,20 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-g",
+    date: "2026-05-25",
+    title: "🏠 ホームを『今日何をやるか』 ダッシュボード化",
+    badge: "ui",
+    highlights: [
+      "🎯 動的『今日のおすすめアクション』 ヒーローを最上部に配置 — 復習候補 / やりかけのカテゴリ / 新規ユーザー の 3 パターンで自動切替",
+      "📊 ミニ統計 3 枚 (今日解いた / 累積 / ジャーナル連続) を一目で確認可能",
+      "🚧 やりかけリスト (折りたたみ) — 過去 14 日以内に attempt があるカテゴリを進捗順に列挙、 1 タップで次の未完答問題に直接遷移",
+      "📚 セカンダリ CTA を 3 列グリッド (参考書 / CRUD / フラッシュカード) に整理 — フラッシュカードがホームから初めて発見可能に",
+      "🗑 旧 RecallBanner.tsx を削除 — TodaysDashboard が action.kind === 'review' で統合表示",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-f",
     date: "2026-05-25",
     title: "📖 ガイド未整備カテゴリにも『もう一度学ぶ』 を表示 (14 カテゴリ救済)",
