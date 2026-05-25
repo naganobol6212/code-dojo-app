@@ -29,6 +29,13 @@ type Props = {
   categoryEmoji: string;
   categoryId: string;
   startIndex?: number;
+  /**
+   * 「戻る」 リンクの URL を上書き (例: ガイド専用クイズで /guide/xxx に戻したい時)
+   * 未指定なら /quiz/[categoryId]
+   */
+  backHref?: string;
+  /** 「戻る」 リンクのラベルを上書き (未指定なら『問題一覧』) */
+  backLabel?: string;
 };
 
 type Status = "answering" | "correct" | "wrong" | "reviewing";
@@ -52,7 +59,11 @@ export function QuizRunner({
   categoryEmoji,
   categoryId,
   startIndex = 0,
+  backHref,
+  backLabel,
 }: Props) {
+  const listHref = backHref ?? `/quiz/${categoryId}`;
+  const listLabel = backLabel ?? "問題一覧";
   const [index, setIndex] = useState(startIndex);
   const [choice, setChoice] = useState<number | null>(null);
   const [textInput, setTextInput] = useState("");
@@ -120,10 +131,10 @@ export function QuizRunner({
         <p className="text-4xl">🤔</p>
         <h2 className="mt-3 text-xl font-bold">問題が見つかりません</h2>
         <Link
-          href={`/quiz/${categoryId}`}
+          href={backHref ?? `/quiz/${categoryId}`}
           className="mt-5 inline-flex items-center gap-1.5 text-sm text-rose-600 hover:underline dark:text-rose-300"
         >
-          ← 問題一覧に戻る
+          ← {backLabel ?? "問題一覧"}に戻る
         </Link>
       </div>
     );
@@ -217,13 +228,13 @@ export function QuizRunner({
       {/* ヘッダー */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          href={`/quiz/${categoryId}`}
+          href={listHref}
           className="group inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-300"
         >
           <span className="transition-transform group-hover:-translate-x-0.5">
             ←
           </span>
-          <span>問題一覧</span>
+          <span>{listLabel}</span>
         </Link>
         <div className="flex items-center gap-2.5">
           {current.type !== "practical" && <StreakDisplay streak={streak} />}
@@ -383,6 +394,7 @@ export function QuizRunner({
                   <ExplanationCard
                     explanation={current.explanation}
                     isCorrect={status === "correct"}
+                    categoryId={current.categoryId}
                   />
                   {current.type === "text" && (
                     <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
@@ -498,17 +510,17 @@ export function QuizRunner({
                   </button>
                 ) : (
                   <Link
-                    href={`/quiz/${categoryId}`}
+                    href={listHref}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-teal-400"
                   >
-                    <span>🎉 完了！問題一覧へ</span>
+                    <span>🎉 完了！{listLabel}へ</span>
                   </Link>
                 )}
                 <Link
-                  href={`/quiz/${categoryId}`}
+                  href={listHref}
                   className="rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
                 >
-                  問題一覧へ
+                  {listLabel}へ
                 </Link>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import type { TrackId, CategoryId } from "@/lib/types";
+import type { TrackId, CategoryId, StudyGuideLink } from "@/lib/types";
 
 // ===========================================================================
 // 参考書 (Study Guide) の型定義
@@ -5364,10 +5364,17 @@ end
     ],
     emoji: "🎓",
     relatedCategoryIds: [
-      "exam-ipa",
-      "exam-lang-os",
-      "exam-ai-claude",
-      "exam-cloud",
+      "code-reading",
+      "ruby-basics",
+      "python-basics",
+      "sql-basics",
+      "db-design",
+      "linux-cli",
+      "security",
+      "ai-engineering",
+      "anthropic-cert",
+      "claude-code-basics",
+      "ai-security",
     ],
     chapters: [
       {
@@ -5425,7 +5432,6 @@ end
           "AP 合格は高度試験の午前 I 免除 (2 年間) — 高度を狙うなら AP は通過点",
           "AI 系は G 検定 (ビジネス) / E 資格 (実装) / DS 検定 (データ横断) の 3 系統で役割分担",
         ],
-        comprehensionQuestionIds: ["ip-001", "ip-002", "ip-003", "ip-004", "ip-005", "ip-006"],
       },
       {
         id: "languages-and-os",
@@ -5495,7 +5501,7 @@ end
           "LPIC と LinuC は応募先の指定資格をまず確認してから選ぶ (出題範囲はほぼ重複)",
           "Kubernetes 認定 (CKA/CKAD/CKS) は実機パフォーマンスベース — 操作速度がそのまま合否",
         ],
-        comprehensionQuestionIds: ["lo-001", "lo-002", "lo-003", "lo-004", "lo-005", "lo-006"],
+        // 関連クイズは Track ページ (/track/exam-prep) の各認定カードからアクセス可能
       },
       {
         id: "ai-and-claude",
@@ -5563,7 +5569,7 @@ end
           "CCA-F の合格戦略は『ドメイン重み (Agentic 27% / Claude Code 20% / Prompt 20% / MCP 18% / Context 15%) に沿った学習時間配分』",
           "クラウドの AI 認定は AWS (AI Practitioner / MLS) / Azure (AI-102) / GCP (PMLE) で役割分担、利用クラウドに揃える",
         ],
-        comprehensionQuestionIds: ["ai-001", "ai-002", "ai-003", "ai-004", "ai-005", "ai-006"],
+        // 関連クイズは Track ページ (/track/exam-prep) の各認定カードからアクセス可能
       },
       {
         id: "cloud-certifications",
@@ -5655,7 +5661,7 @@ end
           "受験順は『入門 (CLF/CDL/AZ-900) は任意の足慣らし、Associate (SAA/ACE/AZ-104) を本命にして Professional に進む』が王道",
           "資格更新は AWS 3 年 / Azure 1 年 (Fundamentals 除く) / GCP 2 年 — 取得後の保守コストも考慮",
         ],
-        comprehensionQuestionIds: ["cl-001", "cl-002", "cl-003", "cl-004", "cl-005", "cl-006"],
+        // 関連クイズは Track ページ (/track/exam-prep) の各認定カードからアクセス可能
       },
     ],
   },
@@ -5665,3 +5671,142 @@ export const findGuide = (id: string) => guides.find((g) => g.id === id);
 
 export const guidesByTrack = (trackId: TrackId) =>
   guides.filter((g) => g.trackId === trackId);
+
+/**
+ * 直接対応のガイドが無いカテゴリのための『代替案内』 マップ。
+ *
+ * 新しいガイドを書く代わりに、 既存ガイドの最も近いトピックの章を
+ * note 付きで案内する。 各エントリは StudyGuideLink[] (ExplanationCard
+ * 側で章タイトルとヒント文が表示される)。
+ *
+ * AI/Claude 系カテゴリは exam-prep-overview の ai-and-claude 章を
+ * topical match として案内 (試験ガイドだが Anthropic 認定の地図
+ * として一般的な参考になるため、 ここでは例外的に許可)。
+ */
+const CATEGORY_STUDY_FALLBACK: Partial<Record<CategoryId, StudyGuideLink[]>> = {
+  "ruby-advanced": [
+    {
+      guideId: "ruby-intro",
+      chapterId: "metaprogramming",
+      note: "Module / メタプログラミングの土台を先に確認",
+    },
+  ],
+  "code-reading": [
+    {
+      guideId: "ruby-intro",
+      chapterId: "values-and-control",
+      note: "まずは Ruby の構文 — 読解の戦略は問題ページのチェックリストで",
+    },
+  ],
+  "rails-convention": [
+    {
+      guideId: "ruby-intro",
+      chapterId: "classes-and-modules",
+      note: "Rails の前提となる Ruby クラス / モジュールの基礎",
+    },
+  ],
+  "routing-controller": [
+    {
+      guideId: "ruby-intro",
+      chapterId: "classes-and-modules",
+      note: "Controller は Ruby のクラス — クラス構造の基礎を確認",
+    },
+  ],
+  "active-record": [
+    {
+      guideId: "db-design-intro",
+      chapterId: "er-and-normalization",
+      note: "AR の前提となる ER / 正規化 / キー設計",
+    },
+    {
+      guideId: "sql-intro",
+      chapterId: "joins",
+      note: "AR の has_many / belongs_to は SQL JOIN の薄いラッパ",
+    },
+  ],
+  rspec: [
+    {
+      guideId: "ruby-intro",
+      chapterId: "testing",
+      note: "RSpec の基本作法はこの章で導入",
+    },
+  ],
+  logs: [
+    {
+      guideId: "linux-intro",
+      chapterId: "text-processing",
+      note: "grep / awk / sed でログを抽出する基礎",
+    },
+  ],
+  debugging: [
+    {
+      guideId: "ruby-intro",
+      chapterId: "exceptions",
+      note: "例外の伝播とリカバリの基礎",
+    },
+  ],
+  practical: [
+    {
+      guideId: "linux-intro",
+      chapterId: "shell-automation-and-ops",
+      note: "実務シェル運用の基礎",
+    },
+  ],
+  // AI/Claude 系 — 専用ガイド未整備のため exam-prep の ai-and-claude 章を案内
+  "claude-code-basics": [
+    {
+      guideId: "exam-prep-overview",
+      chapterId: "ai-and-claude",
+      note: "Anthropic 認定の地図 — CCA-F / Claude Code の射程を概観",
+    },
+  ],
+  "claude-code-practice": [
+    {
+      guideId: "exam-prep-overview",
+      chapterId: "ai-and-claude",
+      note: "Anthropic 認定の地図 — Claude Code 実務応用の前提",
+    },
+  ],
+  "anthropic-cert": [
+    {
+      guideId: "exam-prep-overview",
+      chapterId: "ai-and-claude",
+      note: "Anthropic 認定の地図 — 試験の射程と対策ルート",
+    },
+  ],
+  "ai-engineering": [
+    {
+      guideId: "exam-prep-overview",
+      chapterId: "ai-and-claude",
+      note: "AI / 機械学習認定の地図 (G 検定 / E 資格 / クラウド AI)",
+    },
+  ],
+  "ai-security": [
+    {
+      guideId: "infosec-intro",
+      chapterId: "owasp-overview",
+      note: "AI 固有のリスクの前にセキュリティ全般の地図を",
+    },
+  ],
+};
+
+/**
+ * 与えられた categoryId に対する学び直し案内 (StudyGuideLink) を返す。
+ *
+ * 1. CATEGORY_STUDY_FALLBACK に明示があればそれを優先 (章レベル + note)
+ * 2. なければ guides の relatedCategoryIds から直接マッチを返す
+ *    (exam-prep トラックのガイドは除外 — Ruby 問題で『試験・認定の地図』
+ *    に誤誘導しないため。 AI/Claude 系は上記 1. で明示的に許可)
+ */
+export const studyLinksForCategory = (
+  categoryId: CategoryId,
+): StudyGuideLink[] => {
+  const explicit = CATEGORY_STUDY_FALLBACK[categoryId];
+  if (explicit) return explicit;
+  return guides
+    .filter(
+      (g) =>
+        g.trackId !== "exam-prep" && g.relatedCategoryIds?.includes(categoryId),
+    )
+    .map((g) => ({ guideId: g.id }));
+};

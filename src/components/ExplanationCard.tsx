@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import type { Explanation } from "@/lib/types";
+import type { CategoryId, Explanation } from "@/lib/types";
 import { CodeBlock } from "./CodeBlock";
+import { findGuide, studyLinksForCategory } from "@/data/guides";
 
 type Props = {
   explanation: Explanation;
   isCorrect: boolean;
+  /** 自動学び直しガイド導出のため */
+  categoryId?: CategoryId;
 };
 
 const OFFICIAL_HOSTS = [
@@ -37,8 +41,83 @@ function isOfficial(url: string): boolean {
   }
 }
 
-export function ExplanationCard({ explanation, isCorrect }: Props) {
+type ResolvedStudyLink = {
+  guideId: string;
+  guideTitle: string;
+  guideEmoji: string;
+  chapterId?: string;
+  chapterTitle?: string;
+  href: string;
+  note?: string;
+  /** true なら explicit (Question 側で明示)、 false なら category 自動フォールバック */
+  explicit: boolean;
+};
+
+function resolveStudyLinks(
+  explanation: Explanation,
+  categoryId: CategoryId | undefined,
+): ResolvedStudyLink[] {
+  const links: ResolvedStudyLink[] = [];
+  const seen = new Set<string>();
+
+  // 1. Question 側で明示された studyGuide 優先
+  for (const sg of explanation.studyGuide ?? []) {
+    const guide = findGuide(sg.guideId);
+    if (!guide) continue;
+    const chapter = sg.chapterId
+      ? guide.chapters.find((c) => c.id === sg.chapterId)
+      : undefined;
+    const key = `${guide.id}|${chapter?.id ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    links.push({
+      guideId: guide.id,
+      guideTitle: guide.title,
+      guideEmoji: guide.emoji,
+      chapterId: chapter?.id,
+      chapterTitle: chapter?.title,
+      href: chapter ? `/guide/${guide.id}/${chapter.id}` : `/guide/${guide.id}`,
+      note: sg.note,
+      explicit: true,
+    });
+  }
+
+  // 2. 明示がなければ categoryId からフォールバック (最大 2 件)
+  // studyLinksForCategory は章レベル & note 付きの代替案内も返す
+  if (links.length === 0 && categoryId) {
+    for (const sg of studyLinksForCategory(categoryId).slice(0, 2)) {
+      const guide = findGuide(sg.guideId);
+      if (!guide) continue;
+      const chapter = sg.chapterId
+        ? guide.chapters.find((c) => c.id === sg.chapterId)
+        : undefined;
+      const key = `${guide.id}|${chapter?.id ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      links.push({
+        guideId: guide.id,
+        guideTitle: guide.title,
+        guideEmoji: guide.emoji,
+        chapterId: chapter?.id,
+        chapterTitle: chapter?.title,
+        href: chapter
+          ? `/guide/${guide.id}/${chapter.id}`
+          : `/guide/${guide.id}`,
+        note: sg.note,
+        explicit: false,
+      });
+    }
+  }
+
+  return links;
+}
+
+export function ExplanationCard({ explanation, isCorrect, categoryId }: Props) {
   const [openBeginner, setOpenBeginner] = useState(false);
+  const studyLinks = useMemo(
+    () => resolveStudyLinks(explanation, categoryId),
+    [explanation, categoryId],
+  );
 
   return (
     <motion.div
@@ -152,6 +231,51 @@ export function ExplanationCard({ explanation, isCorrect }: Props) {
               </ul>
             </Section>
           )}
+
+        {studyLinks.length > 0 && (
+          <Section title="もう一度学ぶ — このサイトの参考書" icon="📖">
+            {!isCorrect && (
+              <p className="mb-2 text-[11px] text-zinc-600 dark:text-zinc-400">
+                💡 公式サイトを開く前に、 まずアプリ内の参考書で基礎を読み返してみましょう。
+              </p>
+            )}
+            <ul className="space-y-1.5">
+              {studyLinks.map((l) => (
+                <li key={`${l.guideId}|${l.chapterId ?? ""}`}>
+                  <Link
+                    href={l.href}
+                    className="group flex items-start gap-2 rounded-lg border border-rose-200 bg-white/70 px-3 py-2 text-sm text-zinc-800 transition hover:border-rose-400 hover:bg-rose-50/70 dark:border-rose-500/30 dark:bg-zinc-900/60 dark:text-zinc-100 dark:hover:border-rose-400/60 dark:hover:bg-rose-500/10"
+                  >
+                    <span className="text-base leading-none">{l.guideEmoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-rose-700 group-hover:underline dark:text-rose-300">
+                        {l.chapterTitle ?? l.guideTitle}
+                      </p>
+                      {l.chapterTitle && (
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                          {l.guideTitle}
+                        </p>
+                      )}
+                      {l.note && (
+                        <p className="mt-0.5 text-[11px] text-zinc-600 dark:text-zinc-300">
+                          ヒント: {l.note}
+                        </p>
+                      )}
+                      {!l.explicit && (
+                        <p className="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-500">
+                          ※ カテゴリから自動関連付け
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-rose-500 transition group-hover:translate-x-0.5 dark:text-rose-300">
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
         {explanation.references && explanation.references.length > 0 && (
           <Section title="公式ガイド・参考リンク" icon="🔗">
