@@ -17,6 +17,20 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-d",
+    date: "2026-05-25",
+    title: "📖 解説に『もう一度学ぶ』 セクション追加 (アプリ内参考書への誘導)",
+    badge: "feat",
+    highlights: [
+      "🎯 クイズの解説カード上部に『もう一度学ぶ — このサイトの参考書』 セクションを追加 — 不正解時はヒント文付きで強調",
+      "🔄 自動フォールバック: 問題のカテゴリから guidesByCategory() で関連ガイドを自動導出 — Ruby / JS / TS / Python / SQL / React / Next.js / Nuxt / Git / Linux / Security / DB 等のカテゴリで即動作",
+      "🎯 明示の studyGuide オプション (chapterId / note 付き) で章レベル粒度の指定が可能 — rb-001 にデモ追加",
+      "🚫 試験対策ガイド (exam-prep) は自動フォールバックから除外 — Ruby 問題で『試験・認定の地図』 を誤誘導しないように",
+      "🌐 公式リンクは『最後の砦』 として残置 — 理想はアプリ内で完結",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-c",
     date: "2026-05-25",
     title: "📝 参考書 → クイズの導線をガイド専用クイズに修正",
@@ -60,14 +74,12 @@ export const changelog: ChangelogEntry[] = [
   {
     version: "2026-05-25-a",
     date: "2026-05-25",
-    title: "📝 CCA-F 模擬問題 30 問 + 🎓 試験・認定まとめ (新トラック) を追加",
+    title: "📝 CCA-F 模擬問題 30 問 + 📚 ガイド『試験・認定の地図』を追加",
     badge: "content",
     highlights: [
       "📝 『Anthropic 公式認定 (CCA-F)』カテゴリを『CCA-F 模擬問題』に全面刷新 — 試験ロジ問題から本番形式のシナリオ駆動 30 問に書き換え",
       "🎯 6 つの本番想定シナリオ (SaaS 社内展開 / EC サポート / 法務 PDF 抽出 / 製薬 RAG / 銀行 KYC / OSS バグ修正) × 5 ドメイン (Agentic / Claude Code / Prompt / MCP / Context) の構成",
-      "🎓 新トラック『試験・認定まとめ』を追加 (4 カテゴリ): IPA/データ認定、言語・OS 認定、AI・Claude 関連、クラウド (AWS/GCP/Azure)",
       "📚 ガイド『試験・認定の地図』 (4 章) を新設 — 受験料・出題範囲・合格点・対策ルートを俯瞰",
-      "📋 各カテゴリ 6 問ずつのまとめクイズ (24 問) — FE/AP/高度 / Ruby/Python/LPIC/Java / CCA-F + 主要 AI 認定 / AWS/GCP/Azure 主要ライン",
     ],
     prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
   },

@@ -394,6 +394,7 @@ export function QuizRunner({
                   <ExplanationCard
                     explanation={current.explanation}
                     isCorrect={status === "correct"}
+                    categoryId={current.categoryId}
                   />
                   {current.type === "text" && (
                     <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-white/10 dark:bg-white/5">

@@ -55,6 +55,13 @@ export const questions: Question[] = [
           url: "https://docs.ruby-lang.org/ja/latest/doc/spec=2fliteral.html",
         },
       ],
+      studyGuide: [
+        {
+          guideId: "ruby-intro",
+          chapterId: "values-and-control",
+          note: "Symbol と String の違い・リテラル",
+        },
+      ],
     },
   },
   {

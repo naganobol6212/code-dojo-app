@@ -103,12 +103,30 @@ export type ModelSelfExplanation = {
   pitfall?: string;
 };
 
+/**
+ * 「分からなかった時、 ここを学び直そう」 のガイド章へのリンク。
+ * 公式サイトを見ずアプリ内で完結することを目指す。
+ * 未指定なら categoryId → guide.relatedCategoryIds からフォールバック導出。
+ */
+export type StudyGuideLink = {
+  guideId: string;
+  /** 章 ID。 未指定ならガイドトップへ */
+  chapterId?: string;
+  /** 「○○ が曖昧なら〜」 のヒント文 (例: 「メソッド探索順を復習」) */
+  note?: string;
+};
+
 export type Explanation = {
   summary: string;
   reason: string;
   codeExample?: string;
   commonMistakes?: string[];
   references?: { label: string; url: string }[];
+  /**
+   * 学び直し導線。 配列で複数の章を紐づけられる。
+   * 未指定でもアプリ側で category → guide の自動フォールバックがある。
+   */
+  studyGuide?: StudyGuideLink[];
 
   /**
    * 初心者向けの「噛み砕いた」解説。reason が難しいと感じた人が

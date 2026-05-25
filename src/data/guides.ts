@@ -5671,3 +5671,17 @@ export const findGuide = (id: string) => guides.find((g) => g.id === id);
 
 export const guidesByTrack = (trackId: TrackId) =>
   guides.filter((g) => g.trackId === trackId);
+
+/**
+ * 与えられた categoryId に紐づくガイドを返す (relatedCategoryIds で関連付け済みのもの)。
+ * 学び直し導線の自動フォールバックに使用。
+ *
+ * 試験対策ガイド (trackId === "exam-prep") は他トラックのカテゴリを
+ * 補助的に列挙しているため、 自動フォールバックには含めない
+ * (Ruby のクイズで『試験・認定の地図』へ誘導すると混乱するため)。
+ */
+export const guidesByCategory = (categoryId: CategoryId): Guide[] =>
+  guides.filter(
+    (g) =>
+      g.trackId !== "exam-prep" && g.relatedCategoryIds?.includes(categoryId),
+  );
