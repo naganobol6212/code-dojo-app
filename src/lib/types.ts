@@ -1,4 +1,4 @@
-export type Difficulty = "beginner" | "intermediate" | "advanced";
+export type Difficulty = "beginner" | "intermediate" | "advanced" | "expert";
 
 // ===========================================================================
 // Track (上位: 言語/フレームワーク軸)

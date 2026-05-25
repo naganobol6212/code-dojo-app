@@ -23,14 +23,22 @@ type StatusFilter = "all" | "unattempted" | "review" | "wrong" | "mastered";
 type DifficultyFilter = "all" | Difficulty;
 
 const difficultyLabel = (d: Difficulty) =>
-  d === "beginner" ? "初級" : d === "intermediate" ? "中級" : "上級";
+  d === "beginner"
+    ? "初級"
+    : d === "intermediate"
+      ? "中級"
+      : d === "advanced"
+        ? "上級"
+        : "Expert";
 
 const difficultyClass = (d: Difficulty) =>
   d === "beginner"
     ? "text-emerald-600 dark:text-emerald-400"
     : d === "intermediate"
       ? "text-amber-600 dark:text-amber-400"
-      : "text-rose-600 dark:text-rose-400";
+      : d === "advanced"
+        ? "text-rose-600 dark:text-rose-400"
+        : "text-purple-600 dark:text-purple-400";
 
 function statusOf(attempt: QuestionAttempt | undefined): {
   label: string;
@@ -127,6 +135,7 @@ export function QuestionPicker({
       beginner: 0,
       intermediate: 0,
       advanced: 0,
+      expert: 0,
     };
     for (const q of questions) {
       c[q.difficulty]++;
@@ -330,6 +339,7 @@ export function QuestionPicker({
                 ["beginner", "初級", difficultyCounts.beginner],
                 ["intermediate", "中級", difficultyCounts.intermediate],
                 ["advanced", "上級", difficultyCounts.advanced],
+                ["expert", "Expert", difficultyCounts.expert],
               ] as const
             ).map(([key, label, n]) => (
               <button
@@ -344,7 +354,9 @@ export function QuestionPicker({
                         ? "border-amber-500 bg-amber-500 text-white shadow-sm"
                         : key === "advanced"
                           ? "border-rose-500 bg-rose-500 text-white shadow-sm"
-                          : "border-zinc-700 bg-zinc-800 text-white shadow-sm dark:border-white/30 dark:bg-white/15"
+                          : key === "expert"
+                            ? "border-purple-500 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-sm"
+                            : "border-zinc-700 bg-zinc-800 text-white shadow-sm dark:border-white/30 dark:bg-white/15"
                     : "border-zinc-200 bg-white text-zinc-700 hover:border-rose-300 hover:bg-rose-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
                 }`}
               >
