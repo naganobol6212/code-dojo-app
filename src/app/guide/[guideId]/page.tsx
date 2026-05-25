@@ -22,6 +22,14 @@ export default async function GuideOverviewPage({ params }: Props) {
     (sum, c) => sum + c.readingMinutes,
     0,
   );
+  // ガイド全体の確認問題数 (重複除去後)
+  const guideQuizCount = (() => {
+    const seen = new Set<string>();
+    for (const c of guide.chapters) {
+      for (const qid of c.comprehensionQuestionIds ?? []) seen.add(qid);
+    }
+    return seen.size;
+  })();
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10 sm:py-14">
@@ -125,12 +133,41 @@ export default async function GuideOverviewPage({ params }: Props) {
         </ol>
       </section>
 
-      {/* 関連カテゴリ */}
+      {/* この参考書の確認問題をまとめて解く (Primary CTA) */}
+      {guideQuizCount > 0 && (
+        <section className="mb-10">
+          <Link
+            href={`/guide/${guide.id}/quiz`}
+            className="group flex items-center gap-4 rounded-2xl border-2 border-rose-300 bg-gradient-to-br from-rose-50 to-fuchsia-50 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-400 hover:shadow-lg dark:border-rose-500/40 dark:from-rose-500/10 dark:to-fuchsia-500/10 dark:hover:border-rose-400/60"
+          >
+            <span className="text-4xl">📝</span>
+            <div className="flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-600 dark:text-rose-300">
+                Guide Quiz
+              </p>
+              <h2 className="mt-0.5 text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                この参考書の確認問題をまとめて解く
+              </h2>
+              <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200">
+                各章末の理解度確認 {guideQuizCount} 問を一気に出題 — 読み終えた章の知識を即定着
+              </p>
+            </div>
+            <span className="text-rose-500 transition group-hover:translate-x-1 dark:text-rose-300">
+              →
+            </span>
+          </Link>
+        </section>
+      )}
+
+      {/* 関連カテゴリ (補助導線 — 参考書外の問題も含む) */}
       {guide.relatedCategoryIds && guide.relatedCategoryIds.length > 0 && (
         <section className="mb-10">
-          <h2 className="mb-3 text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            関連カテゴリ (クイズで定着)
+          <h2 className="mb-1 text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            広く練習する — 関連カテゴリ
           </h2>
+          <p className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+            ※ こちらは参考書の章とは独立した、 カテゴリ全体の問題プールです
+          </p>
           <div className="flex flex-wrap gap-2">
             {guide.relatedCategoryIds.map((cid) => {
               const cat = findCategory(cid);

@@ -17,6 +17,20 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-c",
+    date: "2026-05-25",
+    title: "📝 参考書 → クイズの導線をガイド専用クイズに修正",
+    badge: "fix",
+    highlights: [
+      "🎯 参考書概要ページの『関連カテゴリ (クイズで定着)』 が、 参考書とは無関係な広いカテゴリ全体に飛ぶ違和感を解消",
+      "📝 新ルート /guide/[guideId]/quiz — 各章末の comprehensionQuestionIds を全章ぶん集約して連続出題する『この参考書の確認問題』 ページ",
+      "🌟 参考書概要に Primary CTA カード『この参考書の確認問題をまとめて解く (N 問)』 を追加 — 参考書を読み終えた直後の練習導線",
+      "📚 旧『関連カテゴリ』 タグは『広く練習する — 関連カテゴリ』 に改名 + 『参考書の章とは独立』 旨を注記 (補助導線として保持)",
+      "🔧 QuizRunner に backHref / backLabel プロップを追加 — ガイド専用クイズから『参考書』 に直接戻れる",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-b",
     date: "2026-05-25",
     title: "🔧 試験・認定まとめトラックを『概要カード型』にリファクタ (旧トリビアクイズは廃止)",
