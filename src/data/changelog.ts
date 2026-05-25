@@ -17,6 +17,32 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-h",
+    date: "2026-05-25",
+    title: "🗑 CCA-F 模擬問題カテゴリ (30 問) を削除",
+    badge: "content",
+    highlights: [
+      "🎯 CCA-F の知識領域は Claude Code 基礎・実践 / AI エンジニアリング / AI セキュリティ の 4 カテゴリで既にカバーされており、 試験形式の模擬問題 30 問は重複と判断",
+      "🗑 anthropic-cert カテゴリ + questions-anthropic-cert.ts (30 問) を削除",
+      "🔗 試験概要は引き続き /track/exam-prep の Anthropic CCA-F カードと exam-prep-overview ガイドの ai-and-claude 章で参照可能",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
+    version: "2026-05-25-g",
+    date: "2026-05-25",
+    title: "🏠 ホームを『今日何をやるか』 ダッシュボード化",
+    badge: "ui",
+    highlights: [
+      "🎯 動的『今日のおすすめアクション』 ヒーローを最上部に配置 — 復習候補 / やりかけのカテゴリ / 新規ユーザー の 3 パターンで自動切替",
+      "📊 ミニ統計 3 枚 (今日解いた / 累積 / ジャーナル連続) を一目で確認可能",
+      "🚧 やりかけリスト (折りたたみ) — 過去 14 日以内に attempt があるカテゴリを進捗順に列挙、 1 タップで次の未完答問題に直接遷移",
+      "📚 セカンダリ CTA を 3 列グリッド (参考書 / CRUD / フラッシュカード) に整理 — フラッシュカードがホームから初めて発見可能に",
+      "🗑 旧 RecallBanner.tsx を削除 — TodaysDashboard が action.kind === 'review' で統合表示",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-f",
     date: "2026-05-25",
     title: "📖 ガイド未整備カテゴリにも『もう一度学ぶ』 を表示 (14 カテゴリ救済)",
@@ -100,11 +126,9 @@ export const changelog: ChangelogEntry[] = [
   {
     version: "2026-05-25-a",
     date: "2026-05-25",
-    title: "📝 CCA-F 模擬問題 30 問 + 📚 ガイド『試験・認定の地図』を追加",
+    title: "📚 ガイド『試験・認定の地図』を追加",
     badge: "content",
     highlights: [
-      "📝 『Anthropic 公式認定 (CCA-F)』カテゴリを『CCA-F 模擬問題』に全面刷新 — 試験ロジ問題から本番形式のシナリオ駆動 30 問に書き換え",
-      "🎯 6 つの本番想定シナリオ (SaaS 社内展開 / EC サポート / 法務 PDF 抽出 / 製薬 RAG / 銀行 KYC / OSS バグ修正) × 5 ドメイン (Agentic / Claude Code / Prompt / MCP / Context) の構成",
       "📚 ガイド『試験・認定の地図』 (4 章) を新設 — 受験料・出題範囲・合格点・対策ルートを俯瞰",
     ],
     prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
