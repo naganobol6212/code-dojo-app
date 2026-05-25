@@ -5364,10 +5364,17 @@ end
     ],
     emoji: "🎓",
     relatedCategoryIds: [
-      "exam-ipa",
-      "exam-lang-os",
-      "exam-ai-claude",
-      "exam-cloud",
+      "code-reading",
+      "ruby-basics",
+      "python-basics",
+      "sql-basics",
+      "db-design",
+      "linux-cli",
+      "security",
+      "ai-engineering",
+      "anthropic-cert",
+      "claude-code-basics",
+      "ai-security",
     ],
     chapters: [
       {
@@ -5425,7 +5432,6 @@ end
           "AP 合格は高度試験の午前 I 免除 (2 年間) — 高度を狙うなら AP は通過点",
           "AI 系は G 検定 (ビジネス) / E 資格 (実装) / DS 検定 (データ横断) の 3 系統で役割分担",
         ],
-        comprehensionQuestionIds: ["ip-001", "ip-002", "ip-003", "ip-004", "ip-005", "ip-006"],
       },
       {
         id: "languages-and-os",
@@ -5495,7 +5501,7 @@ end
           "LPIC と LinuC は応募先の指定資格をまず確認してから選ぶ (出題範囲はほぼ重複)",
           "Kubernetes 認定 (CKA/CKAD/CKS) は実機パフォーマンスベース — 操作速度がそのまま合否",
         ],
-        comprehensionQuestionIds: ["lo-001", "lo-002", "lo-003", "lo-004", "lo-005", "lo-006"],
+        // 関連クイズは Track ページ (/track/exam-prep) の各認定カードからアクセス可能
       },
       {
         id: "ai-and-claude",
@@ -5563,7 +5569,7 @@ end
           "CCA-F の合格戦略は『ドメイン重み (Agentic 27% / Claude Code 20% / Prompt 20% / MCP 18% / Context 15%) に沿った学習時間配分』",
           "クラウドの AI 認定は AWS (AI Practitioner / MLS) / Azure (AI-102) / GCP (PMLE) で役割分担、利用クラウドに揃える",
         ],
-        comprehensionQuestionIds: ["ai-001", "ai-002", "ai-003", "ai-004", "ai-005", "ai-006"],
+        // 関連クイズは Track ページ (/track/exam-prep) の各認定カードからアクセス可能
       },
       {
         id: "cloud-certifications",
@@ -5655,7 +5661,7 @@ end
           "受験順は『入門 (CLF/CDL/AZ-900) は任意の足慣らし、Associate (SAA/ACE/AZ-104) を本命にして Professional に進む』が王道",
           "資格更新は AWS 3 年 / Azure 1 年 (Fundamentals 除く) / GCP 2 年 — 取得後の保守コストも考慮",
         ],
-        comprehensionQuestionIds: ["cl-001", "cl-002", "cl-003", "cl-004", "cl-005", "cl-006"],
+        // 関連クイズは Track ページ (/track/exam-prep) の各認定カードからアクセス可能
       },
     ],
   },

@@ -72,12 +72,7 @@ export type CategoryId =
   | "anthropic-cert"
   | "claude-code-basics"
   | "claude-code-practice"
-  | "ai-security"
-  // 試験・認定まとめ
-  | "exam-ipa"
-  | "exam-lang-os"
-  | "exam-ai-claude"
-  | "exam-cloud";
+  | "ai-security";
 
 export type Category = {
   id: CategoryId;

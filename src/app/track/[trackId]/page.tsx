@@ -8,7 +8,8 @@ import { crudChallengesByTrack } from "@/data/crud-challenges";
 import { CategoryCard } from "@/components/CategoryCard";
 
 export function generateStaticParams() {
-  return tracks.map((t) => ({ trackId: t.id }));
+  // exam-prep は /track/exam-prep/page.tsx で個別ハンドリング
+  return tracks.filter((t) => t.id !== "exam-prep").map((t) => ({ trackId: t.id }));
 }
 
 type Props = {

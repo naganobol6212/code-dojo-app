@@ -17,6 +17,20 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-b",
+    date: "2026-05-25",
+    title: "🔧 試験・認定まとめトラックを『概要カード型』にリファクタ (旧トリビアクイズは廃止)",
+    badge: "ui",
+    highlights: [
+      "🎯 『試験概要なのにクイズ形式』 という違和感を解消 — 試験ごとの『受験料 / 形式 / 合格点 / 範囲 / 対策ルート』を一覧表示する専用ページに刷新",
+      "🗺 /track/exam-prep を専用レイアウトに変更 — 4 グループ (IPA / 言語・OS / AI・Claude / クラウド) × 計 18 試験を概要カードとして掲載",
+      "🔗 各カードから本サイト内の関連クイズカテゴリ (Ruby / Python / SQL / Claude Code 等) へ直接ジャンプ — 試験対策の練習問題に直結する導線",
+      "🗑 旧『試験トリビアクイズ』 (24 問 + 4 カテゴリ exam-ipa/exam-lang-os/exam-ai-claude/exam-cloud) を完全削除 — 試験概要情報はガイド『試験・認定の地図』に集約",
+      "⚠️ 受験料・形式・合格点は時期変動するため、 必ず公式ページで確認することを各ページで注記",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-27-o",
     date: "2026-05-27",
     title: "📖 コードリーディング問題に『プログラマー脳』 5 ステップ How-to を追加",
