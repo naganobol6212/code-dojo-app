@@ -278,6 +278,60 @@ export const categories: Category[] = [
     accentClass: "from-teal-500/20 to-emerald-500/5",
     ringClass: "hover:ring-teal-500/40",
   },
+
+  // ===========================================================================
+  // Track: AI / Claude
+  // ===========================================================================
+  {
+    id: "ai-engineering",
+    trackId: "ai-claude",
+    name: "AI エンジニアリング基礎",
+    description:
+      "エージェント設計パターン (Anthropic 5 workflows) / RAG / LLMOps / ガバナンス (NIST/ISO/EU AI Act)",
+    emoji: "🧠",
+    accentClass: "from-purple-500/20 to-violet-500/5",
+    ringClass: "hover:ring-purple-500/40",
+  },
+  {
+    id: "anthropic-cert",
+    trackId: "ai-claude",
+    name: "Anthropic 公式認定 (CCA-F)",
+    description:
+      "Claude Certified Architect — Foundations 試験対策 (5 ドメイン: Agentic / Claude Code / Prompt / MCP / Context)",
+    emoji: "🎓",
+    accentClass: "from-fuchsia-500/20 to-pink-500/5",
+    ringClass: "hover:ring-fuchsia-500/40",
+  },
+  {
+    id: "claude-code-basics",
+    trackId: "ai-claude",
+    name: "Claude Code 基礎",
+    description:
+      "ハーネス / CLAUDE.md / Hooks / Skills / Subagents / MCP / Slash Commands / Plugins",
+    emoji: "⚙️",
+    accentClass: "from-indigo-500/20 to-blue-500/5",
+    ringClass: "hover:ring-indigo-500/40",
+  },
+  {
+    id: "claude-code-practice",
+    trackId: "ai-claude",
+    name: "Claude Code 実務活用",
+    description:
+      "ワークフロー設計 / Plan モード / 並列セッション / レビュー / 自動化 / 落とし穴",
+    emoji: "🛠️",
+    accentClass: "from-blue-500/20 to-cyan-500/5",
+    ringClass: "hover:ring-blue-500/40",
+  },
+  {
+    id: "ai-security",
+    trackId: "ai-claude",
+    name: "AI セキュリティ",
+    description:
+      "OWASP LLM Top 10 (2025) / Prompt Injection / Lethal Trifecta / MCP セキュリティ / Constitutional AI",
+    emoji: "🔐",
+    accentClass: "from-red-500/20 to-rose-500/5",
+    ringClass: "hover:ring-red-500/40",
+  },
 ];
 
 export const findCategory = (id: string) =>

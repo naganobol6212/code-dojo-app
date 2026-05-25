@@ -15,7 +15,8 @@ export type TrackId =
   | "db-design"
   | "git"
   | "infosec"
-  | "linux";
+  | "linux"
+  | "ai-claude";
 
 export type Track = {
   id: TrackId;
@@ -64,7 +65,13 @@ export type CategoryId =
   | "sql-joins"
   | "sql-advanced"
   // DB 設計
-  | "db-design";
+  | "db-design"
+  // AI / Claude
+  | "ai-engineering"
+  | "anthropic-cert"
+  | "claude-code-basics"
+  | "claude-code-practice"
+  | "ai-security";
 
 export type Category = {
   id: CategoryId;

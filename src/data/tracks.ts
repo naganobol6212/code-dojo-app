@@ -122,6 +122,17 @@ export const tracks: Track[] = [
     ringClass: "hover:ring-zinc-500/40",
     status: "available",
   },
+  {
+    id: "ai-claude",
+    name: "AI / Claude",
+    short: "AI/Claude",
+    emoji: "🤖",
+    description:
+      "AI エンジニアリング基礎 / Anthropic 公式認定 (CCA-F) / Claude Code / AI セキュリティ",
+    accentClass: "from-purple-500/20 to-fuchsia-500/5",
+    ringClass: "hover:ring-purple-500/40",
+    status: "available",
+  },
 ];
 
 export const findTrack = (id: string) => tracks.find((t) => t.id === id);
