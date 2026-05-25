@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-25-e",
+    date: "2026-05-25",
+    title: "📱 モバイル BottomNav に『🔁 復習』 を追加 — 記憶定着機能の到達性を改善",
+    badge: "ui",
+    highlights: [
+      "🎯 モバイル下部ナビに /review (復習リマインダ) を追加 — これまでモバイル利用者は SiteHeader が sm:hidden で隠れるため /review に永久に辿り着けなかった",
+      "📇 /flashcards は /review ページから 1 タップで遷移可能 (既存導線)、 /stats はホームの ProgressSummary から到達可能",
+      "🗺️ /roadmap は引き続き BottomNav に残置 — 6 アイテム構成 (ホーム / 学習 / 参考書 / 課題 / 復習 / ノート)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-25-d",
     date: "2026-05-25",
     title: "📖 解説に『もう一度学ぶ』 セクション追加 (アプリ内参考書への誘導)",

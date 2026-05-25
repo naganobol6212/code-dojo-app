@@ -14,6 +14,7 @@ const items: Item[] = [
   { href: "/roadmap", label: "学習", icon: "🗺️" },
   { href: "/guide", label: "参考書", icon: "📚" },
   { href: "/crud", label: "課題", icon: "🛠️" },
+  { href: "/review", label: "復習", icon: "🔁" },
   { href: "/journal", label: "ノート", icon: "📝" },
 ];
 
