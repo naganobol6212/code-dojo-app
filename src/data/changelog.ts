@@ -17,6 +17,22 @@ export type ChangelogEntry = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-05-27-j",
+    date: "2026-05-27",
+    title: "🗺️ ロードマップ大強化 — 次にやるカード / Phase 別バー / フィルタ / 弱点ハイライト",
+    badge: "feat",
+    highlights: [
+      "🎯 『次にやるステップ』推薦カードを最上部に — 進行中で最も進んだ or 最初の未着手を 1 つ大きく表示、 1 タップで該当 item を開ける",
+      "📊 全 Phase の進捗ミニバーチャート — 横並び表示で全体俯瞰、 クリックで該当 Phase にスムーズスクロール",
+      "🎚️ 状態フィルタ追加 — 全部 / 未完了 / 完了 / 🔁 弱点 を 1 クリック切替、 各件数バッジ付き、 スティッキー配置",
+      "🔁 弱点ハイライト — 見直しマーク (review) が付いた問題を含むステップに琥珀色リング + バッジ表示、 ヒーローカードからも『弱点 N ステップを優先する』ボタンで一発フィルタ",
+      "🎉 ステップ完了時に KPT 振り返り誘導カードを表示 (ジャーナル連携)",
+      "🏆 全完了時のお祝いカード + KPT 振り返り誘導",
+      "🧹 RoadmapView を 4 コンポーネント + stats モジュールに分割 (NextStepCard / PhaseProgressBars / RoadmapFilters / StepCard + stats.ts)",
+    ],
+    prUrl: "https://github.com/naganobol6212/ruby_on_rails_quiz/pulls",
+  },
+  {
     version: "2026-05-27-i",
     date: "2026-05-27",
     title: "📖 使い方ガイド (/about) + 学習サイクル図 をホームに常設",
