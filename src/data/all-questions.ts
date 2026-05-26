@@ -5,10 +5,12 @@ import { trackQuestions } from "./questions-tracks";
 import { dbQuestions } from "./questions-db";
 import { extraQuestions2 } from "./questions-extra-2";
 import { extraQuestions3 } from "./questions-extra-3";
+import { extraQuestions4 } from "./questions-extra-4";
 import { aiEngineeringQuestions } from "./questions-ai-engineering";
 import { claudeCodeBasicsQuestions } from "./questions-claude-code-basics";
 import { claudeCodePracticeQuestions } from "./questions-claude-code-practice";
 import { aiSecurityQuestions } from "./questions-ai-security";
+import { expertQuestions } from "./questions-expert";
 import { categories, findCategory } from "./categories";
 import type { Question } from "@/lib/types";
 
@@ -19,10 +21,12 @@ export const allQuestions: Question[] = [
   ...dbQuestions,
   ...extraQuestions2,
   ...extraQuestions3,
+  ...extraQuestions4,
   ...aiEngineeringQuestions,
   ...claudeCodeBasicsQuestions,
   ...claudeCodePracticeQuestions,
   ...aiSecurityQuestions,
+  ...expertQuestions,
 ];
 
 export const questionsByCategory = (categoryId: string) =>

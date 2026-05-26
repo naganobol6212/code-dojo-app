@@ -191,7 +191,7 @@ export function StatsView() {
       </Panel>
 
       {/* === 難易度別 ============================================= */}
-      <Panel title="🎯 難易度別正答率" sub="初級 / 中級 / 上級 ごとの定着率">
+      <Panel title="🎯 難易度別正答率" sub="初級 / 中級 / 上級 / Expert ごとの定着率">
         <DifficultyBars data={diffs} />
       </Panel>
 
@@ -566,6 +566,10 @@ const DIFF_META: Record<
   advanced: {
     label: "上級",
     color: "from-rose-400 to-fuchsia-500",
+  },
+  expert: {
+    label: "Expert",
+    color: "from-purple-500 to-fuchsia-600",
   },
 };
 

@@ -85,7 +85,7 @@ export type CategoryStats = {
 };
 
 export type DifficultyStats = {
-  difficulty: "beginner" | "intermediate" | "advanced";
+  difficulty: "beginner" | "intermediate" | "advanced" | "expert";
   total: number;
   attempted: number;
   solved: number;
@@ -271,6 +271,7 @@ export function difficultyStats(progress: Progress): DifficultyStats[] {
     beginner: { total: 0, attempted: 0, solved: 0 },
     intermediate: { total: 0, attempted: 0, solved: 0 },
     advanced: { total: 0, attempted: 0, solved: 0 },
+    expert: { total: 0, attempted: 0, solved: 0 },
   };
   for (const q of allQuestions as Question[]) {
     const b = buckets[q.difficulty];
@@ -283,7 +284,7 @@ export function difficultyStats(progress: Progress): DifficultyStats[] {
     }
   }
   return (
-    ["beginner", "intermediate", "advanced"] as const
+    ["beginner", "intermediate", "advanced", "expert"] as const
   ).map((diff) => {
     const b = buckets[diff];
     return {

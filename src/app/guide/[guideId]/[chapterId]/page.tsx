@@ -154,7 +154,7 @@ export default async function ChapterPage({ params }: Props) {
                 return (
                   <Link
                     key={qid}
-                    href={`/quiz/${q.categoryId}/${qid}`}
+                    href={`/guide/${guideId}/${chapterId}/quiz/${qid}`}
                     className="group flex items-start gap-3 rounded-xl border border-zinc-200 bg-white/70 p-3 transition hover:border-rose-300 hover:bg-rose-50/40 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:border-rose-500/40 dark:hover:bg-rose-500/5"
                   >
                     <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-600 dark:bg-white/10 dark:text-zinc-300">

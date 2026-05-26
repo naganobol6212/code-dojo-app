@@ -44,14 +44,22 @@ const normalizeText = (s: string) =>
   s.trim().toLowerCase().replace(/\s+/g, " ");
 
 const difficultyLabel = (d: string) =>
-  d === "beginner" ? "初級" : d === "intermediate" ? "中級" : "上級";
+  d === "beginner"
+    ? "初級"
+    : d === "intermediate"
+      ? "中級"
+      : d === "advanced"
+        ? "上級"
+        : "Expert";
 
 const difficultyClass = (d: string) =>
   d === "beginner"
     ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
     : d === "intermediate"
       ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-      : "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300";
+      : d === "advanced"
+        ? "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+        : "border-purple-500/50 bg-gradient-to-r from-purple-500/15 to-fuchsia-500/15 text-purple-700 dark:text-purple-300";
 
 export function QuizRunner({
   questions,
