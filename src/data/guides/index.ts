@@ -24,6 +24,7 @@ import { gitIntroGuide } from "./git-intro";
 import { linuxIntroGuide } from "./linux-intro";
 import { infosecIntroGuide } from "./infosec-intro";
 import { dbDesignIntroGuide } from "./db-design-intro";
+import { aiClaudeIntroGuide } from "./ai-claude-intro";
 import { examPrepOverviewGuide } from "./exam-prep-overview";
 
 export type { Guide, GuideChapter, GuideSection } from "./types";
@@ -41,6 +42,7 @@ export const guides: Guide[] = [
   linuxIntroGuide,
   infosecIntroGuide,
   dbDesignIntroGuide,
+  aiClaudeIntroGuide,
   examPrepOverviewGuide,
 ];
 
@@ -56,9 +58,9 @@ export const guidesByTrack = (trackId: TrackId) =>
  * note 付きで案内する。 各エントリは StudyGuideLink[] (ExplanationCard
  * 側で章タイトルとヒント文が表示される)。
  *
- * AI/Claude 系カテゴリは exam-prep-overview の ai-and-claude 章を
- * topical match として案内 (試験ガイドだが Anthropic 認定の地図
- * として一般的な参考になるため、 ここでは例外的に許可)。
+ * AI/Claude 系カテゴリは専用ガイド ai-claude-intro の該当章を案内する
+ * (旧実装は exam-prep-overview の試験案内章へ誘導していたが、 体系学習用の
+ * 参考書ができたため差し替え)。
  */
 const CATEGORY_STUDY_FALLBACK: Partial<Record<CategoryId, StudyGuideLink[]>> = {
   "ruby-advanced": [
@@ -129,33 +131,33 @@ const CATEGORY_STUDY_FALLBACK: Partial<Record<CategoryId, StudyGuideLink[]>> = {
       note: "実務シェル運用の基礎",
     },
   ],
-  // AI/Claude 系 — 専用ガイド未整備のため exam-prep の ai-and-claude 章を案内
+  // AI/Claude 系 — 専用ガイド ai-claude-intro の該当章へ案内
   "claude-code-basics": [
     {
-      guideId: "exam-prep-overview",
-      chapterId: "ai-and-claude",
-      note: "Anthropic 認定の地図 — CCA-F / Claude Code の射程を概観",
+      guideId: "ai-claude-intro",
+      chapterId: "claude-code-basics",
+      note: "ハーネス / CLAUDE.md / Hooks / Skills / Subagents の基礎",
     },
   ],
   "claude-code-practice": [
     {
-      guideId: "exam-prep-overview",
-      chapterId: "ai-and-claude",
-      note: "Anthropic 認定の地図 — Claude Code 実務応用の前提",
+      guideId: "ai-claude-intro",
+      chapterId: "claude-code-practice",
+      note: "ワークフロー / Output Style / 権限省力化 / 落とし穴",
     },
   ],
   "ai-engineering": [
     {
-      guideId: "exam-prep-overview",
-      chapterId: "ai-and-claude",
-      note: "AI / 機械学習認定の地図 (G 検定 / E 資格 / クラウド AI)",
+      guideId: "ai-claude-intro",
+      chapterId: "agent-patterns",
+      note: "エージェント設計パターン — RAG / LLMOps は後続章に続く",
     },
   ],
   "ai-security": [
     {
-      guideId: "infosec-intro",
-      chapterId: "owasp-overview",
-      note: "AI 固有のリスクの前にセキュリティ全般の地図を",
+      guideId: "ai-claude-intro",
+      chapterId: "ai-security",
+      note: "Prompt Injection / Lethal Trifecta / OWASP LLM Top 10",
     },
   ],
 };
