@@ -511,4 +511,350 @@ export const dbQuestions: Question[] = [
         "-- ✅ 推奨\nCREATE TABLE posts (\n  id BIGINT PRIMARY KEY,\n  title TEXT,\n  body TEXT,\n  published_at TIMESTAMPTZ        -- NULL = 下書き、時刻あり = 公開\n);\nCREATE INDEX idx_posts_published_at ON posts(published_at DESC)\n  WHERE published_at IS NOT NULL;\n\n-- 公開済みを取得\nSELECT * FROM posts\nWHERE published_at IS NOT NULL\n  AND published_at <= NOW()\nORDER BY published_at DESC;\n\n-- 予約投稿 (将来時刻でセット)\nUPDATE posts SET published_at = '2026-12-01 10:00' WHERE id = 5;\n\n-- ステータスが 3+ ならステータス列\nstatus TEXT NOT NULL CHECK (status IN ('draft', 'review', 'published', 'archived'))\n-- または enum (PG)\nCREATE TYPE post_status AS ENUM ('draft', 'review', 'published', 'archived');\nstatus post_status NOT NULL DEFAULT 'draft'\n\n-- Rails では enum でラップ\nclass Post < ApplicationRecord\n  enum status: { draft: 0, review: 1, published: 2, archived: 3 }\nend",
     },
   },
+  // ===========================================================================
+  // 🗂️ DB 設計 拡充 (db-019 〜 db-031) — 達人に学ぶDB設計 のトピックを補完
+  //   正規化深掘り / バッドノウハウ / グレーノウハウ / 木構造の表現
+  // ===========================================================================
+  {
+    id: "db-019",
+    categoryId: "db-design",
+    difficulty: "advanced",
+    type: "choice",
+    question: "ボイス・コッド正規形 (BCNF) が第 3 正規形 (3NF) より強める条件は？",
+    choices: [
+      "すべての列を NOT NULL にする",
+      "すべての関数従属で、決定項 (左辺) が候補キーである (非キーが決定項になる従属を排除)",
+      "1 つのセルに複数値を持てるようにする",
+      "外部キーをすべて複合キーにする",
+    ],
+    answerIndex: 1,
+    hints: [
+      "3NF は『非キー属性の推移的従属』の排除まで。",
+      "BCNF は『決定項 (X→Y の X) が必ず候補キー』を要求する。",
+      "候補キーが複数あって列が重なるケースで 3NF との差が出る。",
+    ],
+    explanation: {
+      summary:
+        "BCNF は『どの関数従属でも決定項が候補キー』である状態。3NF を満たしても、候補キーの一部に対する非自明な従属が残ると BCNF 違反になり得る。",
+      reason:
+        "実務では性能や単純さのため 3NF で止めることも多いが、更新異常を厳密に消すなら BCNF を目指す。さらに第 4 正規形 (多値従属)、第 5 正規形 (結合従属) が続く。",
+    },
+  },
+  {
+    id: "db-020",
+    categoryId: "db-design",
+    difficulty: "advanced",
+    type: "choice",
+    question: "第 4 正規形 (4NF) が排除する『多値従属 (multivalued dependency)』の典型例は？",
+    choices: [
+      "1 列に CSV で複数値を詰めている",
+      "非キー属性が別の非キー属性に従属している",
+      "1 つのキーに対し独立した 2 種類の繰り返し (例: 社員の『資格』と『扱える言語』) を 1 表に同居させ、直積で行が膨張する",
+      "主キーが存在しない",
+    ],
+    answerIndex: 2,
+    hints: [
+      "独立した 2 つの 1:N を 1 表に押し込むと起きる。",
+      "組み合わせ (直積) の行が無意味に増える。",
+      "解消は 2 つの表に分割する。",
+    ],
+    explanation: {
+      summary:
+        "4NF は互いに独立な多値従属を同じ表に持たない。社員×資格・社員×言語のような独立した繰り返しを 1 表にすると直積で冗長になり更新異常を生むため、別表に分割する。",
+      reason:
+        "CSV 詰めは 1NF 違反、非キー→非キーは 3NF の話。多値従属は『独立した複数の 1:N の同居』が鍵。",
+      codeExample:
+        "-- ❌ 独立した 2 つの繰り返しを同居 (直積で膨張)\nCREATE TABLE employee_skills (\n  emp_id BIGINT,\n  qualification TEXT,   -- 資格\n  language TEXT,        -- 扱える言語\n  PRIMARY KEY (emp_id, qualification, language)\n);\n-- 資格3 × 言語2 = 6 行に膨らむ\n\n-- ✅ 2 表に分割 (4NF)\nCREATE TABLE employee_qualifications (\n  emp_id BIGINT, qualification TEXT,\n  PRIMARY KEY (emp_id, qualification)\n);\nCREATE TABLE employee_languages (\n  emp_id BIGINT, language TEXT,\n  PRIMARY KEY (emp_id, language)\n);",
+    },
+  },
+  {
+    id: "db-021",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "『達人に学ぶDB設計』でバッドノウハウとされる『ダブルミーニング』とは？",
+    choices: [
+      "1 つのテーブルを 2 つに分割すること",
+      "外部キーを 2 つ持つこと",
+      "主キーを複合キーにすること",
+      "1 つの列が、行や時期によって異なる意味を持ってしまうこと (例: ある時は身長、ある時は体重を入れる汎用列)",
+    ],
+    answerIndex: 3,
+    hints: [
+      "列の『意味』がデータによって変わってしまう。",
+      "『汎用列 col1, col2』に色々詰めると起きやすい。",
+      "1 列 = 1 つの明確な意味、が原則。",
+    ],
+    explanation: {
+      summary:
+        "ダブルミーニングは同じ列が文脈で別の意味になる設計。型・制約を付けられず、クエリも『この行のこの列は何の意味か』を外部知識に頼る羽目になる。",
+      reason:
+        "列には単一の意味を持たせ、意味が異なるなら列を分ける。後から意味を足したくなったら列追加または別テーブルで表現する。『達人に学ぶDB設計徹底指南書 第2版』(ミック) が論理設計のバッドノウハウとして挙げる代表例。",
+    },
+  },
+  {
+    id: "db-022",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "あらゆる区分値を『コード種別・コード値・名称』の 1 つの汎用表にまとめる『単一参照テーブル (なんでも参照テーブル)』の主な問題は？",
+    choices: [
+      "テーブル数が減るので常に良い設計である",
+      "型・外部キー制約が効かず、肥大化し、各参照が正しい種別かを DB で保証できない",
+      "正規化の最高形である",
+      "インデックスが一切張れない",
+    ],
+    answerIndex: 1,
+    hints: [
+      "1 つの表に異種のコードを混ぜる。",
+      "code_type で絞らないと意味が定まらない。",
+      "FK 制約で『この列はこの種別だけ』を強制できない。",
+    ],
+    explanation: {
+      summary:
+        "単一参照テーブルはテーブル数を減らせる反面、列の型が全コード共通になり、外部キーで『この列は◯◯区分のみ』を保証できず、1 表が肥大化して競合・ロックの温床になる。",
+      reason:
+        "区分ごとに個別マスタを作る方が型安全で FK 制約も効く。『達人に学ぶDB設計徹底指南書 第2版』(ミック) が『単一参照テーブル』として戒めるパターン。",
+    },
+  },
+  {
+    id: "db-023",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "テーブルを行で複数表に割る『水平分割』(例: 売上を年ごとに sales_2023 / sales_2024 …) の問題は？",
+    choices: [
+      "正規化の一種で常に推奨される",
+      "列が増えて 1NF に違反する",
+      "分割基準 (年など) がスキーマに埋め込まれ、横断集計・新年度の表追加・アプリ改修が必要になり拡張性を損なう",
+      "外部キーが張れなくなるだけで実害はない",
+    ],
+    answerIndex: 2,
+    hints: [
+      "『来年になったら新しい表を作る』運用になりがち。",
+      "全期間の集計に UNION が必要になる。",
+      "分割は本来 DBMS のパーティション機能の仕事。",
+    ],
+    explanation: {
+      summary:
+        "手動の別テーブルでの水平分割は分割キーが設計に固定化され、拡張・横断集計に弱い。必要なら DBMS の宣言的パーティショニングを使い、論理的には 1 表として扱う。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) もバッドノウハウとして挙げる。パーティションなら DBMS が分割を管理し、アプリからは 1 表に見える。",
+    },
+  },
+  {
+    id: "db-024",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "テーブルを列で 2 つに割る『垂直分割』(例: users を users と users_detail に常時分ける) について適切な理解は？",
+    choices: [
+      "常に推奨される正規化手法である",
+      "第 5 正規形そのものである",
+      "分割すると必ず性能が上がる",
+      "原則は避ける。意味的に同じ実体なら 1 表が基本で、必要なら集約 (サマリー) や非正規化として意図的に行う",
+    ],
+    answerIndex: 3,
+    hints: [
+      "正規化 (無損失分解) とは別物。",
+      "同一実体を毎回 JOIN するコストが増える。",
+      "巨大 TEXT/BLOB の分離など、理由があるときだけ。",
+    ],
+    explanation: {
+      summary:
+        "垂直分割は正規化ではない (無損失分解の保証がない単なる列の切り出し)。同一実体を毎回 JOIN するコストが増えるため原則避ける。",
+      reason:
+        "巨大 BLOB/TEXT の分離やアクセス頻度の大きく異なる列の分離など、明確な理由とトレードオフ理解があるときに限り行う。『達人に学ぶDB設計徹底指南書 第2版』(ミック) のバッドノウハウ/グレーノウハウの議論に対応。",
+    },
+  },
+  {
+    id: "db-025",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "月別売上を jan, feb, …, dec の 12 列で持つ『列持ち』の弱点として正しいのは？",
+    choices: [
+      "項目追加 (13 か月目や新指標) でスキーマ変更が要り、期間集計や汎用処理がしにくい。原則は『行持ち (month, amount)』が柔軟",
+      "行持ちより常にクエリが速いので問題ない",
+      "第 1 正規形に必ず違反する",
+      "外部キーが張れない",
+    ],
+    answerIndex: 0,
+    hints: [
+      "列で持つと『増える項目』に弱い。",
+      "行持ちなら GROUP BY や期間フィルタが自然。",
+      "ただし固定 N 個で読み取り中心なら列持ちが速いことも。",
+    ],
+    explanation: {
+      summary:
+        "列持ちは項目が固定で読み取り中心なら速いが、項目追加にスキーマ変更が要り、月をまたぐ集計が書きにくい。行持ち (year, month, amount) は柔軟で正規形にも沿う。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) が『列持ち vs 行持ち』としてグレーノウハウに分類する論点。要件 (項目の増減・集計の有無) で使い分ける。",
+    },
+  },
+  {
+    id: "db-026",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "『代理キー (surrogate key) vs 自然キー (natural key)』。代理キー (連番/UUID) を主キーに使う主な動機は？",
+    choices: [
+      "自然キーより必ず正規化が進むから",
+      "自然キー (メール・電話番号等) は変わり得る/重複し得るため、不変で一意な人工キーにすると参照が安定する",
+      "代理キーを使うと外部キーが不要になるから",
+      "代理キーはインデックスが不要だから",
+    ],
+    answerIndex: 1,
+    hints: [
+      "自然キーは『将来変わらない保証』が弱い。",
+      "主キー変更は全 FK に波及して高コスト。",
+      "代理キーを使っても自然キーには UNIQUE 制約を付ける。",
+    ],
+    explanation: {
+      summary:
+        "自然キーは意味があり読みやすい一方、変更・重複・桁変更のリスクがある。代理キーは不変・一意で参照が安定するが意味を持たないため、自然キー側に UNIQUE 制約を併用して整合性を守る。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) は『どちらも一長一短』として状況判断を勧める。実務は代理キー + 自然キーに UNIQUE が定番。",
+    },
+  },
+  {
+    id: "db-027",
+    categoryId: "db-design",
+    difficulty: "advanced",
+    type: "choice",
+    question:
+      "グレーノウハウ『多段ビュー』(ビューの上にビューを重ねる) のリスクは？",
+    choices: [
+      "ビューは物理テーブルなのでディスクを浪費する",
+      "ビューには絶対に INDEX が使われない",
+      "元の参照関係が見えにくくなり、性能 (展開後の複雑な実行計画) と保守性が悪化しやすい",
+      "ビューを作ると必ず元テーブルが更新できなくなる",
+    ],
+    answerIndex: 2,
+    hints: [
+      "ビュー A がビュー B を参照…と深くなる。",
+      "実行時に展開され実行計画が読めなくなる。",
+      "段数を抑え、複雑なら実体化 (マテビュー) を検討。",
+    ],
+    explanation: {
+      summary:
+        "多段ビューは再利用に見えて、依存が深くなると実行計画が複雑化し、どのテーブルを触っているか追えなくなる。段数を抑え、重い集計は MATERIALIZED VIEW で実体化する手もある。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) がグレーノウハウとして挙げる。ビュー自体は有用だが多段化は保守性・性能の負債になりやすい。",
+    },
+  },
+  {
+    id: "db-028",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "木構造 (カテゴリ階層など) を RDB で表す『隣接リストモデル (adjacency list)』の特徴は？",
+    choices: [
+      "各行に左右の番号 (lft/rgt) を持たせる",
+      "ルートから自ノードまでのパスを文字列で持つ",
+      "サブツリー全体の取得が常に 1 クエリで容易",
+      "各行に parent_id を持つ最も単純な方式。直近の親子は簡単だが、任意深さの子孫取得は再帰 (WITH RECURSIVE) が必要",
+    ],
+    answerIndex: 3,
+    hints: [
+      "最も素朴で実装が簡単。",
+      "parent_id 列だけで表現する。",
+      "深い子孫は再帰 CTE が要る。",
+    ],
+    explanation: {
+      summary:
+        "隣接リストは parent_id を持つだけで挿入・移動が簡単。一方、全子孫の取得には再帰クエリ (WITH RECURSIVE) や複数回クエリが必要になる。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) が紹介する木構造表現の 1 つ。lft/rgt は入れ子集合、パス文字列は経路列挙の特徴。",
+      codeExample:
+        "CREATE TABLE categories (\n  id BIGINT PRIMARY KEY,\n  name TEXT,\n  parent_id BIGINT REFERENCES categories(id)\n);\n\n-- id=1 配下の全子孫を再帰で取得\nWITH RECURSIVE sub AS (\n  SELECT id, name, parent_id FROM categories WHERE id = 1\n  UNION ALL\n  SELECT c.id, c.name, c.parent_id\n  FROM categories c JOIN sub ON c.parent_id = sub.id\n)\nSELECT * FROM sub;",
+    },
+  },
+  {
+    id: "db-029",
+    categoryId: "db-design",
+    difficulty: "advanced",
+    type: "choice",
+    question: "木構造を表す『入れ子集合モデル (nested set)』の特徴は？",
+    choices: [
+      "各ノードに左 (lft)・右 (rgt) の番号を振り、子.lft BETWEEN 親.lft AND 親.rgt でサブツリーを 1 クエリ取得できる。反面、追加・移動で広範囲の番号振り直しが要る",
+      "parent_id だけで表す最も単純な方式",
+      "パスを '/1/4/9/' のように文字列で持つ",
+      "木構造は表現できない",
+    ],
+    answerIndex: 0,
+    hints: [
+      "lft / rgt の区間で包含関係を表す。",
+      "読み取り (子孫取得) は速い。",
+      "書き込み (挿入・移動) のコストが高い。",
+    ],
+    explanation: {
+      summary:
+        "入れ子集合は区間 (lft, rgt) でツリーを表現し、子孫取得が範囲条件 1 発で速い。ただし挿入・削除・移動で多数の行の番号を更新する必要があり、更新が多い木には不向き。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) が紹介する表現。読み取り重視なら有力、更新重視なら隣接リストや経路列挙を検討。",
+      codeExample:
+        "CREATE TABLE categories (\n  id BIGINT PRIMARY KEY,\n  name TEXT,\n  lft INT NOT NULL,\n  rgt INT NOT NULL\n);\n\n-- lft=2, rgt=9 のノード配下のサブツリー\nSELECT * FROM categories\nWHERE lft BETWEEN 2 AND 9\nORDER BY lft;",
+    },
+  },
+  {
+    id: "db-030",
+    categoryId: "db-design",
+    difficulty: "advanced",
+    type: "choice",
+    question:
+      "木構造を表す『経路列挙モデル (path enumeration / materialized path)』の説明として正しいのは？",
+    choices: [
+      "各ノードに lft/rgt の番号を持たせる",
+      "ルートからのパスを '/1/4/9/' のような文字列で各行に持ち、前方一致 (LIKE '/1/4/%') で子孫を取得する",
+      "parent_id のみで表現し再帰が必須",
+      "木構造には使えない",
+    ],
+    answerIndex: 1,
+    hints: [
+      "パスを 1 列の文字列で表現する。",
+      "LIKE 前方一致で子孫検索ができる。",
+      "移動はパスの一括置換、整合性はアプリ管理になりがち。",
+    ],
+    explanation: {
+      summary:
+        "経路列挙はパス文字列で階層を表し、前方一致で子孫を高速取得できる (インデックスも効く)。一方、パスの整合性 (移動時の一括更新・文字数上限) はアプリ側の責任になりやすい。",
+      reason:
+        "『達人に学ぶDB設計徹底指南書 第2版』(ミック) が紹介する表現。lft/rgt は入れ子集合、parent_id は隣接リストの特徴。",
+      codeExample:
+        "CREATE TABLE categories (\n  id BIGINT PRIMARY KEY,\n  name TEXT,\n  path TEXT NOT NULL          -- 例: '/1/4/9/'\n);\nCREATE INDEX idx_categories_path\n  ON categories (path text_pattern_ops);\n\n-- id=4 配下の子孫\nSELECT * FROM categories WHERE path LIKE '/1/4/%';",
+    },
+  },
+  {
+    id: "db-031",
+    categoryId: "db-design",
+    difficulty: "intermediate",
+    type: "choice",
+    question: "正規化の土台となる『関数従属 (functional dependency) X → Y』の意味は？",
+    choices: [
+      "X と Y が同じ値である",
+      "X が NULL を許さない",
+      "X の値が決まれば Y の値が一意に決まる (例: 社員番号 → 社員名)",
+      "X と Y が外部キーで結ばれている",
+    ],
+    answerIndex: 2,
+    hints: [
+      "『決定する』関係を表す。",
+      "社員番号が決まれば名前は 1 つに決まる。",
+      "正規化は従属関係を整理する作業。",
+    ],
+    explanation: {
+      summary:
+        "関数従属 X→Y は『X が決まれば Y も一意に決まる』関係。正規化はキー以外への従属 (部分従属・推移従属・多値従属) を見つけて表を分割する作業で、関数従属の理解がその土台になる。",
+      reason:
+        "部分従属の排除が 2NF、推移従属の排除が 3NF、決定項を候補キーに限るのが BCNF、多値従属の排除が 4NF。いずれも関数従属 (と多値従属) の概念に基づく。",
+    },
+  },
 ];
