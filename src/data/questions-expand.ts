@@ -1375,8 +1375,451 @@ const nuxtExpand: Question[] = [
   },
 ];
 
+// ===========================================================================
+// Linux & CLI (linux-cli) — cli-021〜038 / 参考書 linux-intro の各章に対応
+// ===========================================================================
+const linuxExpand: Question[] = [
+  {
+    id: "cli-021",
+    categoryId: "linux-cli",
+    difficulty: "beginner",
+    type: "choice",
+    question: "カレントディレクトリの絶対パスを表示するコマンドは?",
+    choices: ["whereami", "pwd", "cwd", "path"],
+    answerIndex: 1,
+    hints: [
+      "print working directory の略。",
+      "今どこにいるかを確認する基本。",
+      "シェルの $PWD にも入っている。",
+    ],
+    explanation: {
+      summary: "pwd (print working directory) で現在地の絶対パスを表示する。",
+      reason:
+        "環境変数 $PWD でも同じ値が得られる。cd で移動、pwd で確認、が基本の往復。",
+    },
+  },
+  {
+    id: "cli-022",
+    categoryId: "linux-cli",
+    difficulty: "beginner",
+    type: "choice",
+    question: "1 つ上のディレクトリへ移動するコマンドは?",
+    choices: ["cd ~", "cd -", "cd ..", "cd /"],
+    answerIndex: 2,
+    hints: [
+      ".. は親ディレクトリを表す。",
+      "~ はホーム、/ はルート。",
+      "cd - は直前のディレクトリ。",
+    ],
+    explanation: {
+      summary: "cd .. で親ディレクトリへ移動する。.. は『1 つ上』を表す相対パス。",
+      reason:
+        "cd ~ はホーム、cd / はルート、cd - は直前にいたディレクトリへ戻る。組み合わせて cd ../../foo のようにも書ける。",
+    },
+  },
+  {
+    id: "cli-023",
+    categoryId: "linux-cli",
+    difficulty: "beginner",
+    type: "choice",
+    question: "ファイルの中身を画面に出力する最も基本的なコマンドは?",
+    choices: ["cat file", "open file", "read file", "show file"],
+    answerIndex: 0,
+    hints: [
+      "concatenate の略。",
+      "複数ファイルを連結もできる。",
+      "長いファイルは less で見るのが快適。",
+    ],
+    explanation: {
+      summary: "cat file でファイル内容を標準出力に表示する。複数指定で連結もできる。",
+      reason:
+        "長大なファイルは less file (スクロール可) や head / tail (先頭/末尾) が便利。cat の濫用 (cat file | grep) は grep file で済むことも多い。",
+    },
+  },
+  {
+    id: "cli-024",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "ファイル内で 'error' を含む行を抽出し、行番号も付けて表示するには?",
+    choices: [
+      "find error -n file",
+      "sed 'error' file",
+      "grep -n 'error' file",
+      "awk 'error' file",
+    ],
+    answerIndex: 2,
+    hints: [
+      "grep が行抽出の基本。",
+      "-n で行番号を付与。",
+      "-i で大小無視、-r で再帰検索。",
+    ],
+    explanation: {
+      summary:
+        "grep -n 'error' file でマッチ行を行番号付きで抽出する。-i (大小無視) / -r (再帰) / -v (反転) もよく使う。",
+      reason:
+        "find はファイル検索、sed は変換・抽出、awk はフィールド処理が主用途。行のパターン抽出は grep が第一候補。",
+    },
+  },
+  {
+    id: "cli-025",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "テキストの各行で 'foo' を 'bar' に置換して出力する sed の書き方は?",
+    choices: [
+      "sed 's/foo/bar/g' file",
+      "sed 'replace foo bar' file",
+      "sed -e foo=bar file",
+      "sed 'foo->bar' file",
+    ],
+    answerIndex: 0,
+    hints: [
+      "s/置換前/置換後/ が基本形。",
+      "g で行内すべて (なければ各行最初の1つ)。",
+      "-i で元ファイルを直接書き換え。",
+    ],
+    explanation: {
+      summary:
+        "sed 's/foo/bar/g' で各行の foo を bar に置換 (g は行内全置換)。-i を付けるとファイルを直接編集する。",
+      reason:
+        "区切り文字は変更可 (s|/path|/new|) でパス置換が楽になる。-i.bak でバックアップ付き編集。複雑な抽出は awk が向く。",
+    },
+  },
+  {
+    id: "cli-026",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "スペース区切りファイルの 2 列目だけを取り出すのに最も適すのは?",
+    choices: [
+      "grep 2 file",
+      "sed 2 file",
+      "cut -f2 file",
+      "awk '{ print $2 }' file",
+    ],
+    answerIndex: 3,
+    hints: [
+      "$2 が 2 番目のフィールド。",
+      "awk は空白区切りを既定で扱う。",
+      "cut はデフォルトがタブ区切り (-d で変更)。",
+    ],
+    explanation: {
+      summary:
+        "awk '{ print $2 }' file で 2 列目を取り出す。awk は空白を既定の区切りとしてフィールド $1, $2... を扱う。",
+      reason:
+        "cut -f2 はデフォルトがタブ区切りなので、空白区切りには cut -d' ' -f2。条件や計算を伴うなら awk が柔軟。",
+    },
+  },
+  {
+    id: "cli-027",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "ログの行数をカウントして『多い順』に並べる定番パイプは? (例: アクセス元 IP 集計)",
+    choices: [
+      "sort file | wc -l",
+      "sort file | uniq -c | sort -rn",
+      "uniq file | grep -c",
+      "cat file | head",
+    ],
+    answerIndex: 1,
+    hints: [
+      "uniq -c は連続する重複をカウント。",
+      "uniq の前に sort で並べておく必要がある。",
+      "sort -rn で数値の降順。",
+    ],
+    explanation: {
+      summary:
+        "sort file | uniq -c | sort -rn が頻度集計の定番。sort で揃え、uniq -c で件数、sort -rn で多い順。",
+      reason:
+        "uniq は『連続した』重複しか潰さないため前段の sort が必須。-r 降順、-n 数値ソート。上位だけなら末尾に | head。",
+    },
+  },
+  {
+    id: "cli-028",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "カレント以下から拡張子 .log のファイルを再帰的に探すコマンドは?",
+    choices: [
+      "find . -name '*.log'",
+      "grep -r '*.log'",
+      "ls -R *.log",
+      "locate .log のみ",
+    ],
+    answerIndex: 0,
+    hints: [
+      "find <起点> -name <パターン>。",
+      "パターンはクォートして展開を防ぐ。",
+      "-type f でファイルのみ。",
+    ],
+    explanation: {
+      summary:
+        "find . -name '*.log' でカレント以下を再帰検索。パターンはクォートしてシェル展開を防ぐ。",
+      reason:
+        "-type f / -mtime -1 (1 日以内) / -size +10M など条件を重ねられる。grep は中身検索、ls -R は一覧表示で用途が違う。locate は事前 DB 依存。",
+    },
+  },
+  {
+    id: "cli-029",
+    categoryId: "linux-cli",
+    difficulty: "advanced",
+    type: "choice",
+    question:
+      "find で見つけた多数のファイルをまとめて削除する、安全で効率的な書き方は?",
+    choices: [
+      "find . -name '*.tmp' | rm",
+      "find . -name '*.tmp' -delete (または -print0 | xargs -0 rm)",
+      "rm -rf $(find .)",
+      "find . | grep tmp | delete",
+    ],
+    answerIndex: 1,
+    hints: [
+      "パイプで rm に直接渡すと空白入りファイル名で壊れる。",
+      "-print0 と xargs -0 は NUL 区切りで安全。",
+      "find 自体の -delete も使える。",
+    ],
+    explanation: {
+      summary:
+        "find . -name '*.tmp' -delete、または find ... -print0 | xargs -0 rm が安全。空白・改行を含むファイル名でも壊れない。",
+      reason:
+        "find | rm は rm が標準入力を引数にしないため動かない。$(find .) は空白で単語分割される危険。-print0 / xargs -0 の NUL 区切りが堅い。削除前に -print で確認を。",
+    },
+  },
+  {
+    id: "cli-030",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question: "コマンドの標準出力をファイルへ『追記』するリダイレクトは?",
+    choices: ["cmd > file", "cmd >> file", "cmd | file", "cmd < file"],
+    answerIndex: 1,
+    hints: [
+      "> は上書き、>> は追記。",
+      "< は入力リダイレクト。",
+      "標準エラーは 2> で分けられる。",
+    ],
+    explanation: {
+      summary:
+        ">> はファイル末尾へ追記、> は上書き (既存内容を消す)。< は標準入力をファイルから取る。",
+      reason:
+        "標準エラーは 2> file、両方まとめるなら > file 2>&1 (または &> file)。| はパイプで次コマンドへ繋ぐもので、ファイルには使わない。",
+    },
+  },
+  {
+    id: "cli-031",
+    categoryId: "linux-cli",
+    difficulty: "advanced",
+    type: "choice",
+    question: "標準出力と標準エラーの『両方』を同じファイルへ書くには?",
+    choices: [
+      "cmd > file 2>&1 (または cmd &> file)",
+      "cmd > file 1>&2",
+      "cmd 2> file > 2",
+      "cmd >> 2 file",
+    ],
+    answerIndex: 0,
+    hints: [
+      "2>&1 は『stderr を stdout と同じ先へ』。",
+      "順序が重要 (> file の後に 2>&1)。",
+      "bash なら &> file が短縮形。",
+    ],
+    explanation: {
+      summary:
+        "cmd > file 2>&1 で stdout をファイルへ、続けて stderr も同じ先へ。bash では cmd &> file が短縮形。",
+      reason:
+        "2>&1 を > file より前に書くと、まだ file へ向いていない時点の stdout (=端末) に stderr が繋がり意図とズレる。順序が大事。",
+    },
+  },
+  {
+    id: "cli-032",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "コマンドの出力を『画面に表示しつつファイルにも保存』するには?",
+    choices: [
+      "cmd > file",
+      "cmd | save file",
+      "cmd | tee file",
+      "cmd >> screen",
+    ],
+    answerIndex: 2,
+    hints: [
+      "T 字に分岐させるイメージ。",
+      "標準出力にも流しつつファイルにも書く。",
+      "追記は tee -a。",
+    ],
+    explanation: {
+      summary:
+        "cmd | tee file は出力を画面 (標準出力) に流しつつ file にも書き込む。追記は tee -a file。",
+      reason:
+        "sudo tee は『リダイレクトに sudo が効かない』問題の回避にも使う (echo x | sudo tee /etc/...)。> はファイルにだけ書き画面には出ない。",
+    },
+  },
+  {
+    id: "cli-033",
+    categoryId: "linux-cli",
+    difficulty: "beginner",
+    type: "choice",
+    question:
+      "ファイルの権限を『所有者は読み書き実行、他は読み実行』(755) にするコマンドは?",
+    choices: [
+      "chmod 755 file",
+      "chown 755 file",
+      "chgrp 755 file",
+      "umask 755 file",
+    ],
+    answerIndex: 0,
+    hints: [
+      "chmod は mode (権限) を変える。",
+      "数字は r=4 w=2 x=1 の合計。",
+      "所有者変更は chown。",
+    ],
+    explanation: {
+      summary:
+        "chmod 755 file で rwx r-x r-x。各桁は所有者/グループ/その他、値は r=4・w=2・x=1 の和。",
+      reason:
+        "chown は所有者、chgrp はグループの変更。umask は新規作成時のデフォルト権限のマスク。記号形式 chmod u+x file も使える。",
+    },
+  },
+  {
+    id: "cli-034",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question: "実行中プロセスを終了させるとき、まず送るべき『穏当な』シグナルは?",
+    choices: [
+      "kill -9 (SIGKILL) を最初に使う",
+      "kill (SIGTERM, 既定) で終了を要求し、応じなければ -9",
+      "kill -0 で強制終了",
+      "kill -HUP が唯一の終了手段",
+    ],
+    answerIndex: 1,
+    hints: [
+      "既定の kill は SIGTERM (15)。",
+      "SIGTERM はクリーンアップの余地を与える。",
+      "SIGKILL (9) は捕捉不能の最終手段。",
+    ],
+    explanation: {
+      summary:
+        "まず kill <pid> (SIGTERM) で正常終了を促し、止まらなければ kill -9 <pid> (SIGKILL)。",
+      reason:
+        "SIGTERM はプロセスが後始末 (一時ファイル削除・接続クローズ) してから終われる。SIGKILL は捕捉・無視できず即殺するため、データ破損のリスクがあり最終手段。kill -0 は生存確認用 (終了しない)。",
+    },
+  },
+  {
+    id: "cli-035",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question:
+      "リモートサーバへパスワードレスでログインするための公開鍵認証の鍵生成コマンドは?",
+    choices: [
+      "ssh-keygen -t ed25519",
+      "ssh --generate-key",
+      "openssl ssh-key",
+      "ssh-add --new",
+    ],
+    answerIndex: 0,
+    hints: [
+      "鍵ペア (秘密鍵/公開鍵) を作る。",
+      "ed25519 が現代の推奨アルゴリズム。",
+      "公開鍵をサーバの authorized_keys に置く。",
+    ],
+    explanation: {
+      summary:
+        "ssh-keygen -t ed25519 で鍵ペアを生成し、公開鍵 (.pub) を ssh-copy-id でサーバの ~/.ssh/authorized_keys に登録するとパスワードレスログインできる。",
+      reason:
+        "秘密鍵は絶対に共有しない (パーミッション 600)。ssh-add は鍵をエージェントに登録するコマンド。アルゴリズムは ed25519 か rsa 4096 が推奨。",
+    },
+  },
+  {
+    id: "cli-036",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question: "現在 LISTEN 中のポートとプロセスを確認する現代的なコマンドは?",
+    choices: [
+      "ps -listen",
+      "ss -tlnp",
+      "ifconfig -ports",
+      "route -n",
+    ],
+    answerIndex: 1,
+    hints: [
+      "ss は netstat の後継。",
+      "t=TCP, l=LISTEN, n=数値, p=プロセス。",
+      "lsof -i :PORT でも調べられる。",
+    ],
+    explanation: {
+      summary:
+        "ss -tlnp で LISTEN 中の TCP ポートとプロセスを表示する (netstat -tlnp の現代版)。",
+      reason:
+        "ss は iproute2 に含まれ netstat より高速。lsof -i :8080 で特定ポートを使うプロセスを特定するのも定番。ifconfig/route はインターフェースやルーティング表示。",
+    },
+  },
+  {
+    id: "cli-037",
+    categoryId: "linux-cli",
+    difficulty: "advanced",
+    type: "choice",
+    question: "堅牢なシェルスクリプトの冒頭に置く定番の安全策は?",
+    choices: [
+      "echo start を書くだけ",
+      "set -euo pipefail",
+      "trap だけを書く",
+      "#!/bin/sh を消す",
+    ],
+    answerIndex: 1,
+    hints: [
+      "エラーで即停止、未定義変数で停止。",
+      "パイプ途中の失敗も検知。",
+      "事故を早期に止めるための定石。",
+    ],
+    explanation: {
+      summary:
+        "set -euo pipefail は、エラーで即終了 (-e)、未定義変数をエラー (-u)、パイプ途中の失敗も拾う (pipefail) という堅牢化の定番。",
+      reason:
+        "-e は途中失敗で暴走を防ぎ、-u はタイプミス変数を検出、pipefail は a | b で a が失敗しても b の成功で隠れるのを防ぐ。IFS 設定や trap によるクリーンアップと併用すると更に堅い。",
+    },
+  },
+  {
+    id: "cli-038",
+    categoryId: "linux-cli",
+    difficulty: "intermediate",
+    type: "choice",
+    question: "毎日決まった時刻にスクリプトを自動実行する仕組みは?",
+    choices: [
+      "シェルの alias",
+      "cron (crontab -e で登録)",
+      "ssh-agent",
+      "history コマンド",
+    ],
+    answerIndex: 1,
+    hints: [
+      "crontab -e で編集する。",
+      "分 時 日 月 曜日 の 5 フィールド。",
+      "systemd timer という選択肢もある。",
+    ],
+    explanation: {
+      summary:
+        "cron で定期実行する。crontab -e に『分 時 日 月 曜日 コマンド』を書く (例: 0 3 * * * /path/job.sh で毎日 3 時)。",
+      reason:
+        "近年は systemd timer も有力 (ログ統合・依存制御)。cron は環境変数が乏しいので、スクリプト内で PATH 等を明示するとハマりにくい。",
+    },
+  },
+];
+
 export const expandQuestions: Question[] = [
   ...nextjsExpand,
   ...gitExpand,
   ...nuxtExpand,
+  ...linuxExpand,
 ];
