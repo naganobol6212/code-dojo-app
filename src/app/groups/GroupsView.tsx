@@ -64,30 +64,69 @@ export function GroupsView() {
     if (!name.trim() || busy) return;
     setBusy(true);
     setError(null);
-    const id = await createGroup(name.trim(), description.trim());
-    setBusy(false);
-    if (!id) {
-      setError("グループの作成に失敗しました。時間をおいて再度お試しください。");
-      return;
+    // タイムアウト + try/catch で『手応えが無い』状態を起こさない
+    const timeout = new Promise<"timeout">((resolve) =>
+      setTimeout(() => resolve("timeout"), 15000),
+    );
+    try {
+      const result = await Promise.race([
+        createGroup(name.trim(), description.trim()),
+        timeout,
+      ]);
+      if (result === "timeout") {
+        setError(
+          "作成リクエストがタイムアウトしました。通信状況を確認して再度お試しください。",
+        );
+        return;
+      }
+      if (!result) {
+        setError(
+          "グループの作成に失敗しました。ログイン状態やデータベースのマイグレーション (0003_groups.sql) が適用されているか確認してください。",
+        );
+        return;
+      }
+      router.push(`/groups/${result}`);
+    } catch (e) {
+      console.error("[groups] createGroup threw", e);
+      setError("グループの作成中にエラーが発生しました。");
+    } finally {
+      setBusy(false);
     }
-    router.push(`/groups/${id}`);
   }, [name, description, busy, router]);
 
   const onJoin = useCallback(async () => {
     if (!code.trim() || busy) return;
     setBusy(true);
     setError(null);
-    const result = await joinGroupByCode(code.trim());
-    setBusy(false);
-    if (!result.ok) {
-      setError(
-        result.error === "invalid"
-          ? "招待コードが見つかりません。コードを確認してください。"
-          : "参加に失敗しました。時間をおいて再度お試しください。",
-      );
-      return;
+    const timeout = new Promise<"timeout">((resolve) =>
+      setTimeout(() => resolve("timeout"), 15000),
+    );
+    try {
+      const result = await Promise.race([
+        joinGroupByCode(code.trim()),
+        timeout,
+      ]);
+      if (result === "timeout") {
+        setError(
+          "参加リクエストがタイムアウトしました。通信状況を確認して再度お試しください。",
+        );
+        return;
+      }
+      if (!result.ok) {
+        setError(
+          result.error === "invalid"
+            ? "招待コードが見つかりません。コードを確認してください。"
+            : "参加に失敗しました。時間をおいて再度お試しください。",
+        );
+        return;
+      }
+      router.push(`/groups/${result.groupId}`);
+    } catch (e) {
+      console.error("[groups] joinGroupByCode threw", e);
+      setError("参加処理中にエラーが発生しました。");
+    } finally {
+      setBusy(false);
     }
-    router.push(`/groups/${result.groupId}`);
   }, [code, busy, router]);
 
   // --- 認証ゲート -----------------------------------------------------------

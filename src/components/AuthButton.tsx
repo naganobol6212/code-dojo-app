@@ -137,11 +137,6 @@ export function AuthButton() {
                 </p>
               )}
             </div>
-            <div className="px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-              {syncing
-                ? "🔄 同期中..."
-                : "☁️ デバイス間で進捗が同期されています"}
-            </div>
             <Link
               href="/profile"
               onClick={() => setOpen(false)}
