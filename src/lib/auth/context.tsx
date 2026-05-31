@@ -54,13 +54,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     // 初回セッション (リロード後の復元)
-    sb.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      const u = data.session?.user ?? null;
-      setUser(u);
-      setCurrentUserId(u?.id ?? null);
-      setReady(true);
-    });
+    // 何かが固まっても ready は必ず立てる (アバター/ログインボタンが永久に
+    // 非表示にならないよう保険を二重に: catch + 5 秒タイムアウト)
+    let readyFallbackTimer: ReturnType<typeof setTimeout> | null = setTimeout(
+      () => {
+        if (!cancelled) setReady(true);
+        readyFallbackTimer = null;
+      },
+      5000,
+    );
+    sb.auth
+      .getSession()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const u = data.session?.user ?? null;
+        setUser(u);
+        setCurrentUserId(u?.id ?? null);
+        setReady(true);
+        if (readyFallbackTimer) {
+          clearTimeout(readyFallbackTimer);
+          readyFallbackTimer = null;
+        }
+      })
+      .catch((err) => {
+        console.warn("[auth] getSession failed", err);
+        if (!cancelled) setReady(true);
+        if (readyFallbackTimer) {
+          clearTimeout(readyFallbackTimer);
+          readyFallbackTimer = null;
+        }
+      });
 
     // 状態変化を購読
     const { data: subscription } = sb.auth.onAuthStateChange(
@@ -90,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      if (readyFallbackTimer) clearTimeout(readyFallbackTimer);
       subscription.subscription.unsubscribe();
     };
   }, [enabled]);
