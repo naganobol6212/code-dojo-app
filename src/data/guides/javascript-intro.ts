@@ -5,11 +5,13 @@ export const javascriptIntroGuide: Guide = {
     trackId: "javascript",
     title: "Modern JavaScript — ES2015+ の地図",
     subtitle:
-      "MDN 公式 + You Don't Know JS のエッセンスを 7 章に。値とスコープ → 関数 → 非同期 → 配列 → OOP → ESM → TypeScript への橋渡し",
+      "MDN・JavaScript.info・You Don't Know JS などの定番資料を参照し、ES2015+ の要点を 7 章に。値とスコープ → 関数 → 非同期 → 配列 → OOP → ESM → TypeScript への橋渡し",
     audience:
       "JavaScript を体系的に学び直したい人、フロントエンド/Node に入りたい人",
     sources: [
       { label: "MDN Web Docs (JavaScript)", url: "https://developer.mozilla.org/ja/docs/Web/JavaScript" },
+      { label: "JavaScript.info (The Modern JavaScript Tutorial)", url: "https://ja.javascript.info/" },
+      { label: "You Don't Know JS Yet (Kyle Simpson、無料公開)", url: "https://github.com/getify/You-Dont-Know-JS" },
       { label: "TC39 ECMAScript 仕様", url: "https://tc39.es/ecma262/" },
     ],
     emoji: "🟨",
