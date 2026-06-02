@@ -28,17 +28,28 @@ export const javascriptIntroGuide: Guide = {
         ],
         sections: [
           {
-            heading: "1.1 let / const / var",
-            body: "現代の JS では基本 const、再代入が必要なら let、var は使わない。var には『ホイスト + 関数スコープ』という古い癖があり、ループ内で罠が起きやすい。",
-            code: "// var の罠: ループ後も生存\nfor (var i = 0; i < 3; i++) {}\nconsole.log(i)        // 3\n\n// let はブロックスコープ\nfor (let j = 0; j < 3; j++) {}\nconsole.log(j)        // ReferenceError\n\n// const は再代入不可だが、中身は変更可\nconst arr = [1, 2]\narr.push(3)           // OK\narr = [4]             // TypeError",
+            heading: "1.1 let / const / var の使い分けとスコープ",
+            body: "JavaScript には変数を作る書き方が 3 つある (const / let / var)。使い分けは『基本 const、後で値を入れ替える必要があるなら let、var は使わない』だけ覚えれば実務はほぼ困らない。\n\nたとえばループの中で合計を足し込んでいく変数のように『値が変わる』ものは let。それ以外 (関数の戻り値を受け取る・設定値・参照したいオブジェクトなど) は『この変数は後で書き換えない』という意思表示として const にしておくと、読む人が安心できるしバグも減る。\n\nvar を避ける理由は『スコープ (変数が生きている範囲) が大ざっぱ』だから。let / const は if や for の波カッコ {} を抜けると消える (ブロックスコープ)。一方 var は関数の外に出ない限り消えない (関数スコープ) ので、for ループのカウンタがループの後でも生き残るなど、意図しない場所に変数が漏れてバグの温床になる。",
+            code: "// ブロックスコープ (let/const) vs 関数スコープ (var)\n{\n  let a = 1\n  const b = 2\n  var c = 3\n}\n// a, b は波カッコ {} を抜けた時点で消える\nconsole.log(c)        // 3   ← var は {} の外でもまだ生きている\n\n// for ループでも同じ\nfor (var i = 0; i < 3; i++) {}\nconsole.log(i)        // 3   ← var はループの外まで残る\n\nfor (let j = 0; j < 3; j++) {}\nconsole.log(j)        // ReferenceError: j is not defined\n\n// const は『変数の再代入ができない』だけ。中身の編集は OK\nconst arr = [1, 2]\narr.push(3)           // OK (配列の中身は変えてよい)\narr = [4]             // TypeError (arr 自体を別物に差し替えるのは NG)",
             language: "javascript",
             notes: [
-              "const のオブジェクトの中身を完全に固定したいなら `Object.freeze(obj)`",
-              "var はモダンコードベースでは出てこないので使わない",
+              "ブロック ({}) とは if / for / while や単独の { ... } のカッコの中のこと。let / const はここを抜けると消え、var は関数の外まで消えない、が核心",
+              "const のオブジェクト/配列の『中身まで』固めたいなら Object.freeze(obj) (浅い凍結なのでネストには各階層に必要)",
+              "var は古い JS との互換で残っているだけ。新規コードで var を出さないルールにすれば、ここで挙げた罠はそもそも踏まない",
             ],
           },
           {
-            heading: "1.2 プリミティブと参照",
+            heading: "1.2 ホイスト (巻き上げ) と TDZ",
+            body: "JavaScript は実行前にコードを下読みして、宣言を見つけておく。この『宣言が先に認識される』挙動をホイスト (巻き上げ) と呼ぶ。問題は var / let / const で挙動が違うこと。\n\nvar は『宣言が巻き上がる + undefined で初期化された状態で先に存在する』ため、宣言行より前に使ってもエラーにならず、黙って undefined を返す。これはタイプミスやコードの並べ替えで気づきにくいバグになる。\n\nlet / const も巻き上げ自体はされるが、宣言行に到達するまでは触ると ReferenceError を投げてくれる。この『宣言前で触れない区間』を TDZ (Temporal Dead Zone / 一時的な死角) と呼ぶ。要するに var だけが『使う前のミスを黙ってスルー』してしまうので、この一点でも let / const を使う理由になる。",
+            code: "// var: 宣言前に使っても undefined (エラーにならない)\nconsole.log(x)        // undefined\nvar x = 1\nconsole.log(x)        // 1\n\n// let / const: 宣言前に触ると ReferenceError (TDZ)\nconsole.log(y)        // ReferenceError: Cannot access 'y' before initialization\nlet y = 1\n\n// 上の var の挙動は、内部的にはこう動いているイメージ\n// var x          ← 宣言だけ先頭へ巻き上げ (この時点では undefined)\n// console.log(x) //   → undefined\n// x = 1          ← 代入は元の位置で実行される",
+            language: "javascript",
+            notes: [
+              "TDZ = 宣言行に到達するまでの『その変数に触れない区間』。let / const がうっかりミスを早期に教えてくれる仕組み",
+              "関数宣言 (function foo() {}) は中身ごと巻き上がるので宣言前に呼べるが、これも混乱の元なので関数も使う前に定義する習慣が安全",
+            ],
+          },
+          {
+            heading: "1.3 プリミティブと参照",
             body: "number / string / boolean / null / undefined / symbol / bigint はプリミティブで値コピー。object / array / function は参照型で代入は参照コピー。これが React の『state を直接 mutate しない』ルールの根拠でもある。",
             code: "// プリミティブ: 値コピー\nlet a = 1\nlet b = a\nb = 99\nconsole.log(a)        // 1\n\n// オブジェクト: 参照コピー\nconst x = { n: 1 }\nconst y = x\ny.n = 99\nconsole.log(x.n)      // 99\n\n// 浅いコピー\nconst z = { ...x }\n// 深いコピー\nconst deep = structuredClone(x)",
             language: "javascript",
@@ -47,7 +58,7 @@ export const javascriptIntroGuide: Guide = {
             ],
           },
           {
-            heading: "1.3 真偽値・== の罠・??",
+            heading: "1.4 真偽値・== の罠・??",
             body: "JS の falsy は false / 0 / '' / null / undefined / NaN / 0n。`==` は緩い比較で罠が多いので `===` を使う。`??` (Nullish Coalescing) は null / undefined だけで右辺を採用 (`||` と違い 0 や '' を保持)。",
             code: "// falsy\nBoolean(0)            // false\nBoolean('')           // false\nBoolean([])           // true (空配列は truthy!)\nBoolean({})           // true\n\n// == の罠\n0 == false            // true\n'' == false           // true\nnull == undefined     // true\n\n// === を使う\n0 === false           // false\n\n// ??\nconst port = process.env.PORT ?? 3000   // PORT が 0 だったら 0 を採用\nconst port2 = process.env.PORT || 3000  // 0 は falsy なので 3000 になる罠",
             language: "javascript",
