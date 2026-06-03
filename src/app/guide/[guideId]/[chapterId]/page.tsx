@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findGuide, guides } from "@/data/guides";
-import { findQuestion } from "@/data/all-questions";
-import { findCategory } from "@/data/categories";
 import { SampleCodeBlock } from "@/components/SampleCodeBlock";
 import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { InlineComprehensionQuiz } from "@/components/InlineComprehensionQuiz";
 
 export function generateStaticParams() {
   return guides.flatMap((g) =>
@@ -139,45 +138,13 @@ export default async function ChapterPage({ params }: Props) {
         </ul>
       </section>
 
-      {/* 確認問題 */}
+      {/* 確認問題 (ページ内で完結) */}
       {chapter.comprehensionQuestionIds &&
         chapter.comprehensionQuestionIds.length > 0 && (
-          <section className="mt-10">
-            <h2 className="mb-3 text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              🧪 理解度確認 — クイズに進む
-            </h2>
-            <div className="space-y-2">
-              {chapter.comprehensionQuestionIds.map((qid) => {
-                const q = findQuestion(qid);
-                if (!q) return null;
-                const cat = findCategory(q.categoryId);
-                return (
-                  <Link
-                    key={qid}
-                    href={`/guide/${guideId}/${chapterId}/quiz/${qid}`}
-                    className="group flex items-start gap-3 rounded-xl border border-zinc-200 bg-white/70 p-3 transition hover:border-rose-300 hover:bg-rose-50/40 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:border-rose-500/40 dark:hover:bg-rose-500/5"
-                  >
-                    <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
-                      {q.difficulty[0].toUpperCase()}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm text-zinc-800 group-hover:text-rose-600 dark:text-zinc-200 dark:group-hover:text-rose-300">
-                        {q.question}
-                      </p>
-                      {cat && (
-                        <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-500">
-                          {cat.emoji} {cat.name}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-zinc-300 transition group-hover:translate-x-0.5 group-hover:text-rose-500 dark:text-zinc-600 dark:group-hover:text-rose-400">
-                      →
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
+          <InlineComprehensionQuiz
+            questionIds={chapter.comprehensionQuestionIds}
+            backHref={`/guide/${guideId}/${chapterId}`}
+          />
         )}
 
       {/* 参考リンク */}
