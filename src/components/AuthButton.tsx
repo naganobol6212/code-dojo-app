@@ -14,8 +14,7 @@ import { getMyProfile, PROFILE_UPDATED_EVENT } from "@/lib/profile";
  * - ログイン中: アバター + ドロップダウン (ユーザー名 / 同期中表示 / ログアウト)
  */
 export function AuthButton() {
-  const { enabled, ready, user, syncing, signInWithGitHub, signOut } =
-    useAuth();
+  const { enabled, ready, user, syncing, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<{
     name: string;
@@ -60,24 +59,13 @@ export function AuthButton() {
 
   if (!user) {
     return (
-      <button
-        type="button"
-        onClick={() => {
-          void signInWithGitHub();
-        }}
-        title="GitHub でログインしてデバイス間で進捗を同期"
+      <Link
+        href="/auth/login"
+        title="ログイン / 新規登録"
         className="inline-flex h-9 items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-rose-400 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-rose-400/60 dark:hover:text-rose-300"
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 16 16"
-          className="h-3.5 w-3.5"
-          fill="currentColor"
-        >
-          <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.08.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.86 2.33.66.07-.52.28-.86.5-1.06-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8a8 8 0 0 0-8-8Z" />
-        </svg>
         <span>ログイン</span>
-      </button>
+      </Link>
     );
   }
 

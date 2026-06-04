@@ -35,6 +35,16 @@ type AuthState = {
   /** 進行中の同期があるか */
   syncing: boolean;
   signInWithGitHub: () => Promise<void>;
+  /** メアド+パスワードでログイン。エラー時はメッセージを返す */
+  signInWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null }>;
+  /** メアド+パスワードで新規登録。エラー時はメッセージを返す */
+  signUpWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -160,6 +170,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      const sb = getSupabase();
+      if (!sb) return { error: "認証機能が無効です。" };
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      return { error: error?.message ?? null };
+    },
+    [],
+  );
+
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string) => {
+      const sb = getSupabase();
+      if (!sb) return { error: "認証機能が無効です。" };
+      const { error } = await sb.auth.signUp({ email, password });
+      return { error: error?.message ?? null };
+    },
+    [],
+  );
+
   const signOut = useCallback(async () => {
     const sb = getSupabase();
     if (!sb) return;
@@ -173,9 +203,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       syncing,
       signInWithGitHub,
+      signInWithEmail,
+      signUpWithEmail,
       signOut,
     }),
-    [enabled, ready, user, syncing, signInWithGitHub, signOut],
+    [
+      enabled,
+      ready,
+      user,
+      syncing,
+      signInWithGitHub,
+      signInWithEmail,
+      signUpWithEmail,
+      signOut,
+    ],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
@@ -191,6 +232,8 @@ export function useAuth(): AuthState {
       user: null,
       syncing: false,
       signInWithGitHub: async () => {},
+      signInWithEmail: async () => ({ error: null }),
+      signUpWithEmail: async () => ({ error: null }),
       signOut: async () => {},
     };
   }
