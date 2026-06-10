@@ -19,14 +19,29 @@ export function AuthLoginForm() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  /** signup ボタンを押した時刻。一定時間待っても user が立たないとメール確認待ちと案内 */
+  const [signupRequestedAt, setSignupRequestedAt] = useState<number | null>(null);
 
   // 既にログイン済みならホームへ
   useEffect(() => {
     if (user) router.replace("/");
   }, [user, router]);
+
+  // signup 後、2.5 秒経っても user が立たないなら『メール確認 ON の可能性』を案内
+  useEffect(() => {
+    if (!signupRequestedAt) return;
+    if (user) return; // すでにログイン状態 = 自動リダイレクト中
+    const timer = window.setTimeout(() => {
+      setInfo(
+        "アカウントを作成しました。すぐにログイン状態にならない場合は、Supabase の Email Confirmation が ON の可能性があります。確認メールのリンクを踏むか、設定で OFF にしてください。",
+      );
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [signupRequestedAt, user]);
 
   if (!enabled) {
     return (
@@ -55,9 +70,15 @@ export function AuthLoginForm() {
       setError("メールアドレスとパスワードを入力してください。");
       return;
     }
-    if (mode === "signup" && password.length < 8) {
-      setError("パスワードは 8 文字以上にしてください。");
-      return;
+    if (mode === "signup") {
+      if (password.length < 8) {
+        setError("パスワードは 8 文字以上にしてください。");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        setError("パスワードと確認用パスワードが一致しません。");
+        return;
+      }
     }
     setBusy(true);
     setError(null);
@@ -73,12 +94,15 @@ export function AuthLoginForm() {
         setError(msg);
         return;
       }
-      // 成功: useEffect が user を検出してホームへ遷移する
-      setInfo(
-        mode === "signin"
-          ? "ログインしました。リダイレクトします…"
-          : "登録が完了しました。リダイレクトします…",
-      );
+      // 成功:
+      // - メール確認 OFF なら user が立って自動リダイレクト
+      // - メール確認 ON のままだと user は立たないので useEffect で案内を出す
+      if (mode === "signup") {
+        setInfo("登録リクエストを送信しました…");
+        setSignupRequestedAt(Date.now());
+      } else {
+        setInfo("ログインしました。リダイレクトします…");
+      }
     } catch (e2) {
       console.error("[auth] submit error", e2);
       setError("予期せぬエラーが発生しました。時間をおいて再度お試しください。");
@@ -139,6 +163,8 @@ export function AuthLoginForm() {
               setMode(m);
               setError(null);
               setInfo(null);
+              setPasswordConfirm("");
+              setSignupRequestedAt(null);
             }}
             className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               mode === m
@@ -188,6 +214,35 @@ export function AuthLoginForm() {
             className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-500"
           />
         </div>
+        {mode === "signup" && (
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+              パスワード (確認)
+            </label>
+            <input
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              placeholder="••••••••"
+              aria-invalid={
+                passwordConfirm.length > 0 && passwordConfirm !== password
+              }
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-500 ${
+                passwordConfirm.length > 0 && passwordConfirm !== password
+                  ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 dark:border-rose-500/50"
+                  : "border-zinc-300 focus:border-rose-400 focus:ring-rose-500/20 dark:border-white/10"
+              }`}
+            />
+            {passwordConfirm.length > 0 && passwordConfirm !== password && (
+              <p className="mt-1 text-[10px] text-rose-600 dark:text-rose-300">
+                パスワードが一致しません
+              </p>
+            )}
+          </div>
+        )}
 
         {error && (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
