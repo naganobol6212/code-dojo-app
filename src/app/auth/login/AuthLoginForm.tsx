@@ -31,13 +31,13 @@ export function AuthLoginForm() {
     if (user) router.replace("/");
   }, [user, router]);
 
-  // signup 後、2.5 秒経っても user が立たないなら『メール確認 ON の可能性』を案内
+  // signup 後、2.5 秒経っても user が立たないなら確認メールの案内を出す
   useEffect(() => {
     if (!signupRequestedAt) return;
     if (user) return; // すでにログイン状態 = 自動リダイレクト中
     const timer = window.setTimeout(() => {
       setInfo(
-        "アカウントを作成しました。すぐにログイン状態にならない場合は、Supabase の Email Confirmation が ON の可能性があります。確認メールのリンクを踏むか、設定で OFF にしてください。",
+        "確認メールをお送りしました。メール内のリンクをクリックすると登録が完了します。届かない場合は迷惑メールフォルダもご確認ください。",
       );
     }, 2500);
     return () => window.clearTimeout(timer);
